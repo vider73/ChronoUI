@@ -7,7 +7,7 @@ ChronoUI is a lightweight, high-performance user interface library built on **Di
 
 **What makes ChronoUI unique?** It was designed from the ground up to be **LLM-Native**. The architecture—self-contained DLLs, string-based property reflection, and JSON manifests—eliminates complex header dependencies. This makes it incredibly easy for Large Language Models (like ChatGPT, Claude, or Gemini) to generate fully functional, hardware-accelerated widgets in a single pass without hallucinating compilation errors.
 
-![App screenshot](/screenshot1.jpg)
+![App screenshot](/assets/images/screenshot1.jpg)
 ---
 
 ## 🚀 Key Features
