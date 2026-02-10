@@ -185,7 +185,97 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 }
 ```
 
----
+Here is a Markdown description tailored for a GitHub README, focusing on the specific features implemented in your `main.cpp`.
+
+***
+
+# Core Features
+
+ChronoUI simplifies modern C++ GUI development by bridging the gap between low-level Win32 performance and high-level reactive programming patterns. Below are the key mechanisms for interaction, timing, and state management.
+
+## ⚡ Event Subscription system
+
+ChronoUI utilizes a string-based event system that allows widgets to subscribe to specific actions using C++ lambdas. This approach eliminates the need for complex message maps or inheritance for basic interactions. Handlers receive the sending widget and a JSON payload containing event details.
+
+**Key capabilities:**
+*   **Lambda Support:** Capture local state or window handles directly within the callback.
+*   **JSON Payloads:** Receive structured data (e.g., mouse coordinates, file paths, or input values) through a standardized `const char* json` argument.
+*   **Chaining:** Add multiple handlers to the same widget effortlessly.
+
+```cpp
+// Example: Handling a button click to close a window
+WidgetFactory::Create("cw.Button.dll")
+    ->SetProperty("title", "Close Application")
+    ->addEventHandler("onClick", [hwnd](IWidget* sender, const char* json) {
+        // 'json' contains event details, 'sender' is the button instance
+        SendMessage(hwnd, WM_CLOSE, 0, 0);
+    });
+
+// Example: Handling list item selection
+myList->addEventHandler("onItemClick", [](IWidget* sender, const char* json) {
+    // json example: {"index":1, "id":"sys_conf"}
+    std::cout << "Selected item data: " << json << std::endl;
+});
+```
+
+## ⏱️ Built-in Widget Timers
+
+Forget creating separate threads or managing global Windows timers for UI updates. ChronoUI allows you to attach timers directly to any specific widget. When the timer ticks, it triggers a named event on that widget, which is handled on the UI thread.
+
+**Key capabilities:**
+*   **Widget-Scoped:** Timers are tied to the lifecycle of the widget.
+*   **Event Integration:** A timer tick is treated just like a click or keypress, triggering a standard event handler.
+*   **Animation & Polling:** Ideal for animating progress bars, updating clocks, or polling hardware sensors (like CPU usage).
+
+```cpp
+// Example: A self-updating progress bar
+WidgetFactory::Create("cw.Progress.dll")
+    ->SetProperty("title", "Processing...")
+    // 1. Register a timer named "Step" that fires every 100ms
+    ->AddTimer("Step", 100) 
+    // 2. Handle the "Step" event to update the UI
+    ->addEventHandler("Step", [&](IWidget* sender, const char* json) {
+        static float progress = 0.0f;
+        progress += 1.0f;
+        if (progress > 100.0f) progress = 0.0f;
+        
+        // Update the visual property
+        sender->SetProperty("value", std::to_string(progress).c_str());
+    });
+```
+
+## 🔗 Reactive Observables (Data Binding)
+
+ChronoUI supports reactive state management through `ChronoObservable<T>`. Instead of manually updating every widget when a variable changes, you can bind widget properties (like text, value, or enabled state) directly to a shared observable object.
+
+**Key capabilities:**
+*   **Two-Way Binding:** Changes in the UI (e.g., EditBox) update the variable; changes to the variable update the UI.
+*   **One-to-Many:** A single boolean observable can control the "disabled" state of an entire form.
+*   **Thread Safety:** Simplifies state synchronization across your application.
+
+```cpp
+// 1. Create shared state
+auto isWorking = std::make_shared<ChronoObservable<bool>>(false);
+auto userInput = std::make_shared<ChronoObservable<std::string>>("");
+
+// 2. Bind UI elements to state
+// This button automatically disables when 'isWorking' is true
+WidgetFactory::Create("cw.Button.dll")
+    ->SetProperty("title", "Submit")
+    ->Bind("disabled", isWorking) 
+    ->addEventHandler("onClick", [=](IWidget* sender, const char* json) {
+        // Trigger the state change - UI updates automatically
+        *isWorking = true; 
+        
+        // Simulate work...
+        *userInput = "Processing...";
+    });
+
+// This text box is bound to 'userInput'. 
+// It updates if the code changes the variable, and vice versa.
+WidgetFactory::Create("cw.EditBox.dll")
+    ->Bind("value", userInput);
+```
 
 ## 🧩 Widget Library Documentation
 
@@ -205,12 +295,52 @@ ChronoUI comes with a suite of built-in high-performance widgets.
 
 ---
 
-## 📂 Project Structure
+## 🛠️ How to Build
+
+ChronoUI is built for Windows and requires the **MSVC compiler** (included with Visual Studio).
+
+### Prerequisites
+*   **Visual Studio 2019 or 2022** (Desktop development with C++ workload)
+*   **CMake** (3.15 or later)
+
+### Build Instructions
+
+You can build the project using the command line or by generating a Visual Studio solution.
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/YourUsername/ChronoUI.git
+    cd ChronoUI
+    ```
+
+2.  **Generate the project files:**
+    ```bash
+    cmake -S . -B build
+    ```
+
+3.  **Compile:**
+    
+    **Option A: Command Line (Fastest)**
+    ```bash
+    cmake --build build --config Release
+    ```
+
+    **Option B: Visual Studio**
+    *   Open `build\ChronoUI.sln` in Visual Studio.
+    *   Select **Release** configuration.
+    *   Build Solution (`Ctrl+Shift+B`).
+
+### 📂 Output
+Once compiled, you will find the **`ChronoUI.dll`** and **`ChronoUI.lib`** files in:
+`build/Release/`
+
+> **Note:** For AI-## 📂 Project Structure
 
 *   `include/` - Core headers (`ChronoUI.hpp`, `WidgetImpl.hpp`).
 *   `src/core/` - The layout engine and window management logic.
 *   `src/widgets/` - **The Plugin Folder.** All widgets live here as individual `.cpp` files.
 *   `src/examples/` - Example applications.
+*   `assets/` - Images and css styles goes here.
 
 ## 🤝 Contribution & Credits
 
