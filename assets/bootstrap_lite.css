@@ -1,0 +1,217 @@
+/* Standard Buttons */
+/* --- Base Class Update --- */
+.btn {
+    background-color: #fbfbfb;
+    color: #1a1a1a;
+    border-radius: 2px;
+    border-width: 1px;
+    border-style: solid; /* Added so border-color works */
+    padding: 5px;
+    margin: 2px;
+    font-size: 10px;
+    cursor: pointer; /* Makes it look clickable */
+}
+
+/* Base Hover (if no color class is added) */
+.btn:hover {
+    background-color: #e9ecef;
+    border-color: #ced4da;
+}
+
+/* --- Primary (Blue) --- */
+.btn-primary {
+    color: #ffffff;
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.btn-primary:hover {
+    background-color: #0b5ed7; /* Darker Blue */
+    border-color: #0a58ca;
+    color: #ffffff;
+}
+
+/* --- Secondary (Gray) --- */
+.btn-secondary {
+    color: #ffffff;
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+
+.btn-secondary:hover {
+    background-color: #5c636a; /* Darker Gray */
+    border-color: #565e64;
+    color: #ffffff;
+}
+
+/* --- Success (Green) --- */
+.btn-success {
+    color: #ffffff;
+    background-color: #198754;
+    border-color: #198754;
+}
+
+.btn-success:hover {
+    background-color: #157347; /* Darker Green */
+    border-color: #146c43;
+    color: #ffffff;
+}
+
+/* --- Danger (Red) --- */
+.btn-danger {
+    color: #ffffff;
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+.btn-danger:hover {
+    background-color: #bb2d3b; /* Darker Red */
+    border-color: #b02a37;
+    color: #ffffff;
+}
+
+/* --- Warning (Yellow) --- */
+.btn-warning {
+    color: #000000;
+    background-color: #ffc107;
+    border-color: #ffc107;
+}
+
+.btn-warning:hover {
+    background-color: #ffca2c; /* Darker Yellow */
+    border-color: #ffc720;
+    color: #000000;
+}
+
+/* --- Info (Cyan) --- */
+.btn-info {
+    color: #000000;
+    background-color: #0dcaf0;
+    border-color: #0dcaf0;
+}
+
+.btn-info:hover {
+    background-color: #31d2f2; /* Darker Cyan */
+    border-color: #25cff2;
+    color: #000000;
+}
+
+/* --- Light (White/Gray) --- */
+.btn-light {
+    color: #000000;
+    background-color: #f8f9fa;
+    border-color: #f8f9fa;
+}
+
+.btn-light:hover {
+    background-color: #d3d4d5; /* Darker Gray */
+    border-color: #c6c7c8;
+    color: #000000;
+}
+
+/* --- Dark (Black/Dark Gray) --- */
+.btn-dark {
+    color: #ffffff;
+    background-color: #212529;
+    border-color: #212529;
+}
+
+.btn-dark:hover {
+    background-color: #424649; /* Lighter Black (for contrast) */
+    border-color: #373b3e;
+    color: #ffffff;
+}
+
+/****************************************************************************/
+
+/* 1. The  text Base Class */
+.text {
+    font-size: 11px;
+    line-height: 1.5;
+    background-color: #fbfbfb;
+    color: #212529; /* Dark Grey (Default) */
+}
+.text:hover {
+    font-size: 11px;
+    line-height: 1.5;
+    background-color: #fbfbfb;
+    color: #212529; /* Dark Grey (Default) */
+}
+
+/* 2. Colors */
+.text-primary {
+    color: #0d6efd;
+}
+/* Blue */
+.text-success {
+    color: #198754;
+}
+/* Green */
+.text-danger {
+    color: #dc3545;
+}
+/* Red */
+.text-muted {
+    color: #6c757d;
+}
+/* Grey */
+.text-white {
+    color: #ffffff;
+}
+/* White */
+
+/* 3. Alignment */
+.text-center {
+    text-align: center;
+}
+
+.text-end {
+    text-align: right;
+}
+
+/* 4. Styling */
+.fw-bold {
+    font-weight: 700;
+}
+
+.fst-italic {
+    font-style: italic;
+}
+
+.text-uppercase {
+    text-transform: uppercase;
+}
+
+/* Card Container */
+.card {
+    background-color: #ffffff;
+    border-radius: 8px; /* Rounded corners */
+    border-width: 1px;
+    border-color: #e0e0e0; /* Light gray border */
+    margin: 12px; /* Spacing between cards */
+    padding: 12px; /* Internal padding */
+    height: 100px; /* Fixed height for consistency */
+    width: 100%;
+    icon-size: 32px;
+    card-height: 120px;
+}
+
+/* Typography Colors */
+.card {
+    color: #1a1a1a; /* Title color */
+    description-color: #5f6368; /* Subtitle/Body color */
+}
+
+/* Interaction States */
+.card:hover {
+    color: #111111; /* Title color */
+    background-color: #f8f9fa;
+    border-color: #d0d0d0;
+}
+
+.card:selected {
+    color: #111111; /* Title color */
+    background-color: #e3f2fd; /* Light blue active state */
+    border-color: #2196f3;
+    border-width: 2px;
+}

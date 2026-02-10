@@ -1,0 +1,69 @@
+2026/02/02 Replace GDI+ to Direct2D 
+
+2026/01/21:jlr:Add todo.txt to cmakelists.txt
+
+
+Update Control to use Properties instead of local variables when possible. For standard colors (background-color, foreground-color), use the CSS functions. (To initialize a color use SetProperty("background-color", "#ffffff");
+SetProperty("label", "value");
+GetStringProperty("label")
+GetIntProperty("label")
+GetFloatProperty("label")
+GetBoolProperty("label")
+Color GetCSSColorStyle(const char* key)
+COLORREF GetCSSColorRefStyle(const char* key)
+int GetCSSIntStyle(const char* key, int def = 0)
+
+
+
+Cache Parsed Properties:
+Do not parse CSS/Hex strings in OnDrawWidget.
+Change: When SetProperty("color", "#FFF") is called, parse it immediately into a Gdiplus::Color member variable. The OnDrawWidget should only read the pre-calculated Color.
+Switch to Direct2D (D2D1):
+Replace GDI+ with Direct2D. It is hardware accelerated. If you stick with GDI+, you must implement Dirty Rect logic to only repaint parts of the screen that changed, rather than InvalidateRect(NULL, TRUE) which repaints the whole widget.
+Virtualize the Widget Tree (Lightweight Controls):
+Only the Top-Level Window (Container) should be an HWND. Internal Buttons, Labels, and Panels should be C++ classes drawn onto the parent's surface. Windows acts as a "canvas," and you handle internal click routing.
+Note: cw.ListCards.cpp actually does this correctly (it draws items virtually rather than creating widgets for them). Apply this logic to the rest of the layout system.
+Optimize the Timer Loop:
+LightingStormOverlay and EyesControl use SetTimer with 16ms (60FPS). Windows timers are low-priority.
+Fix: Use a centralized ChronoController "Heartbeat" loop using QueryPerformanceCounter that dispatches Update(deltaTime) calls to widgets, ensuring synchronized animations across the UI.
+Fix Layout Parsing:
+Pre-calculate layout requirements. Store dimensions as struct { float value; Unit type; }. Do not parse strings inside UpdateWidgets.
+
+
+
+/**************** prompt to modernize this code to Direct2D ****************/
+Help porting this widget to Direct2D, make the widget looks like 2026 one:
+
+Use always std::min y std::max with parenthesis (std::min)(a,b) (std::max)(a,b).
+
+New Painting entry point:
+virtual void OnDrawWidget(ID2D1RenderTarget* pRT);
+
+Base class Helpers:
+void DrawWidgetBackground(ID2D1RenderTarget* pRT, const D2D1_RECT_F& r, bool hovereffect = true);
+void DrawTextStyled(ID2D1RenderTarget* pRT, const std::string& text, const D2D1_RECT_F& r, bool allowHover = true);
+
+Inline Helpers (already available):
+D2D1_COLOR_F CSSColorToD2D(const std::string& cssColor, float alpha = 1.0f);
+void ImageFromBase64(ID2D1RenderTarget* pRT, const char* b64, ID2D1Bitmap** ppBitmap);
+inline std::string WideToNarrow(const std::wstring& wstr);
+inline std::wstring NarrowToWide(const std::string& str);
+inline ComPtr<IDWriteFactory> GetDWriteFactory();
+inline ComPtr<ID2D1Factory> GetD2DFactory();
+template <class T> void SafeRelease(T** ppT);
+
+Add to new code:
+
+#include <d2d1.h>
+#include <dwrite.h>
+#include <string>
+#include <algorithm>
+#include <vector>
+
+#include "WidgetImpl.hpp"
+
+// Link DWrite and D2D
+#pragma comment(lib, "dwrite.lib")
+#pragma comment(lib, "d2d1.lib")
+
+using namespace ChronoUI;
