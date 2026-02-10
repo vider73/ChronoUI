@@ -94,8 +94,6 @@ WidgetFactory::Create("cw.WifiSignalWidget.dll")->SetProperty("signal_strength",
 
 ## 📚 Basic Usage
 
-Here is a complete example to create a window, define a layout, and add a button.
-HelloWorld.cpp example
 ```cpp
 #include <string>
 #include <filesystem>
