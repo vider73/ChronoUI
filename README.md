@@ -27,7 +27,7 @@ Large Language Models (like ChatGPT, Claude, or Gemini) are excellent at web des
 You can simply ask an LLM to *"Create a dashboard with a CPU monitor using Bootstrap dark theme,"* and it will generate valid, hardware-accelerated C++ code in a single pass.
 
 ### 🤝 Join the Journey
-This is a hobby project and my very first venture into the open-source world. I am delighted to share my experiences and learn alongside the community. Whether you are a veteran C++ developer tired of the status quo, or an AI enthusiast wanting to generate apps, I invite you to help me build the UI framework of the future.
+This is a hobby project and my very first venture into the open-source world. I am delighted to share my experiences and learn alongside the community. Whether you are a veteran C++ developer tired of the status quo, or an AI enthusiast wanting to generate apps, I invite you to help me build an open UI framework for Windows.
 
 ***
 ![App screenshot](/assets/images/screenshot1.jpg)
