@@ -5,9 +5,11 @@ short version of what a session needs to be productive in its first turn.
 
 ## What this is
 
-**ChronoUI is a Win32 / Direct2D widget framework.** Headers in `include/`, a
-layout engine and a CSS parser in `src/core/`, 23 hot-pluggable widget DLLs in
-`src/widgets/`, and thirteen examples in `src/examples/`. It has **no external
+**ChronoUI is a Win32 / Direct2D widget framework.** Two models: the virtual
+widgets, which are headers only (`include/V*.hpp`, no DLL to ship), and the
+older DLL model, `ChronoUI.dll` (a layout engine and a CSS parser in
+`src/core/`) plus 23 hot-pluggable widget DLLs in `src/widgets/`. Thirteen
+examples in `src/examples/`, all on the virtual model. It has **no external
 dependencies**: Visual Studio 2022 and the Windows SDK build everything. Keep
 it that way; a `find_package(... REQUIRED)` in the root `CMakeLists.txt` is a
 regression.
@@ -90,5 +92,7 @@ cmake -S . -B build -A x64
 cmake --build build --config Release
 ```
 
-Output lands in `build/Release/`. `CHRONOUI_BUILD_EXAMPLES=OFF` builds only
-`ChronoUI.dll` for a parent project that pulls this in with `add_subdirectory`.
+Output lands in `build/Release/`. `CHRONOUI_BUILD_EXAMPLES=OFF` builds only the
+legacy `ChronoUI.dll` for a parent project that pulls this in with
+`add_subdirectory`; a project that uses the virtual widgets needs no build step
+at all, just the include path.

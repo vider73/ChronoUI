@@ -179,14 +179,15 @@ add_executable(HelloWorld WIN32
 add_executable(Welcome WIN32
                 src/examples/Welcome.cpp
 )
-# Virtual-widget examples: one source file each, framework only, no assets.
-# VirtualShowcase is the guided tour; the rest each teach one thing (see
-# docs/EXAMPLES.md). Adding one = a new .cpp here and a line in that list.
+# Virtual-widget examples: one source file each, no assets, and NO DLL of ours:
+# the virtual model is header-only (include/V*.hpp), the SDK libraries come in
+# through #pragma comment(lib) in the headers. VirtualShowcase is the guided
+# tour; the rest each teach one thing (see docs/EXAMPLES.md). Adding one = a
+# new .cpp here and a line in that list.
 set(CHRONOUI_VIRTUAL_EXAMPLES
     VirtualHello VirtualShowcase Dashboard Kanban Controls Form Table Gallery Bounce Settings Mail Photos Catalog)
 foreach(_ex ${CHRONOUI_VIRTUAL_EXAMPLES})
     add_executable(${_ex} WIN32 src/examples/${_ex}.cpp)
-    target_link_libraries(${_ex} PRIVATE ChronoUI)
     set_target_properties(${_ex} PROPERTIES FOLDER "Examples")
 endforeach()
 

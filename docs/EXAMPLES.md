@@ -1,7 +1,7 @@
 # ChronoUI — Examples
 
-Thirteen small programs, each a single `.cpp` that links `ChronoUI.dll` and
-nothing else. They are meant to be read as much as run: every one teaches a
+Thirteen small programs, each a single `.cpp` and nothing else: the virtual
+widgets are headers, so no DLL of ours sits next to the exe. They are meant to be read as much as run: every one teaches a
 handful of framework mechanisms and stays short enough to hold in your head,
 which is also what makes them good raw material for a language model. Each
 section ends with prompts that have been tried and produce working code.
