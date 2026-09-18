@@ -11,7 +11,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **Clone it, build it, run it — with nothing but Visual Studio and the Windows SDK.**
-No vcpkg, no package manager, no runtime, no bundled browser. One `ChronoUI.dll`, GPU-accelerated, cold start under a second.
+No vcpkg, no package manager, no runtime, no bundled browser. The whole framework is one `ChronoUI.dll`, GPU-accelerated, cold start under a second; the 23 `cw.*.dll` widgets of the older model are optional extras on top.
 
 ![VirtualShowcase — the guided tour of the framework](docs/screenshots/virtual-showcase.png)
 
@@ -141,7 +141,7 @@ cmake --build build --config Release           # everything
 cmake --build build --config Release --target VirtualShowcase   # just the tour
 ```
 
-Output lands in `build/Release/`: `ChronoUI.dll`, the 23 `cw.*.dll` widgets, the examples (`VirtualShowcase`, `VirtualHello`, `Welcome`, `HelloWorld`, `LayoutTester`, `ChronoUIDemo`).
+Output lands in `build/Release/`: `ChronoUI.dll` (the framework, the only DLL the examples link), the 23 optional `cw.*.dll` widgets, the examples (`VirtualShowcase`, `VirtualHello`, `Welcome`, `HelloWorld`, `LayoutTester`, `ChronoUIDemo`).
 
 One of those wants one optional package. `WidgetTesterDemo` parses JSON with nlohmann/json; without it that target is skipped with a message and everything else still builds:
 
