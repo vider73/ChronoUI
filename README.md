@@ -106,9 +106,7 @@ btn->SetProperty("title", "Submit")
 
 Every widget DLL exports a **JSON manifest** — properties, types, defaults, events. That is what makes the model extensible by prompt: hand an assistant one existing widget file and it has the entire contract. **23 widgets ship today**: buttons, inputs, switches, sliders, cards, an image viewer with a magnifier, a real-time plot, a CRT-style vitals monitor, an LED equalizer, three gauges, clocks, mouse-following eyes, and snow / storm / spinner overlays.
 
-| `ChronoUIDemo` — everything at once | `WidgetTesterDemo` — live property inspector |
-|---|---|
-| ![dashboard](docs/screenshots/widgets-dashboard.png) | ![tester](docs/screenshots/widget-tester.png) |
+![ChronoUIDemo — the 23 widgets, one family per page](docs/screenshots/widgets-dashboard.png)
 
 Full reference for both models, widget by widget: **[docs/WIDGETS.md](docs/WIDGETS.md)**.
 
@@ -141,13 +139,7 @@ cmake --build build --config Release           # everything
 cmake --build build --config Release --target VirtualShowcase   # just the tour
 ```
 
-Output lands in `build/Release/`: the thirteen virtual-widget examples (each a standalone exe, no DLL beside it), and for the older model `ChronoUI.dll` (its layout engine and CSS parser) with the 23 `cw.*.dll` widgets and their demos (`VirtualShowcase`, `VirtualHello`, `Welcome`, `HelloWorld`, `LayoutTester`, `ChronoUIDemo`).
-
-One of those wants one optional package. `WidgetTesterDemo` parses JSON with nlohmann/json; without it that target is skipped with a message and everything else still builds:
-
-```bash
-vcpkg install nlohmann-json --triplet x64-windows
-```
+Output lands in `build/Release/`: the thirteen virtual-widget examples (each a standalone exe, no DLL beside it), and for the older model `ChronoUI.dll` (its layout engine and CSS parser) with the 23 `cw.*.dll` widgets and their demos (`ChronoUIDemo`, `HelloWorld`, `Welcome`).
 
 ### Using ChronoUI from your own project
 

@@ -7,8 +7,7 @@ codebase was written that way. What follows is what will save you a round trip.
 
 Visual Studio 2022 with the Desktop C++ workload, and CMake ≥ 3.21. Nothing
 else: the framework, the widgets and the examples have no external
-dependencies. One target wants nlohmann/json (`WidgetTesterDemo`); without it that one
-is skipped and the rest still builds.
+dependencies.
 
 Close any running example before rebuilding — a running exe holds its own
 lock and the link step fails with `LNK1104`.

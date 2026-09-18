@@ -7,6 +7,9 @@
 #include <algorithm>
 #include <regex>
 #include <cctype>
+#include <cmath>
+#include <functional>
+#include <memory>
 
 #include <pdh.h>
 #pragma comment(lib, "pdh.lib")
@@ -51,15 +54,6 @@ public:
 	}
 };
 
-// Logic to safely delete a widget
-void SafeDeleteWidget(ICell* parentCell, IWidget* widgetToDelete) {
-	if (!parentCell || !widgetToDelete) return;
-
-	// Step 1: Tell the cell to stop managing this widget
-	parentCell->RemoveWidget(widgetToDelete);
-
-	//widgetToDelete->Destroy();
-}
 
 // Helper for password complexity
 bool IsPasswordComplex(const std::string& pass) {
@@ -385,1055 +379,315 @@ BOOL ExampleLoginDlg(HWND parent, std::string& resultUser, std::string& resultPa
 	return FALSE;
 }
 
-int exampleEqualizer(HWND parent)
+
+// =============================================================================
+// ChronoUIDemo — the 23 DLL widgets, one family per page.
+//
+// This is the older widget model: one HWND per widget, created by name from
+// its DLL, styled with CSS classes (assets/bootstrap_lite.css) and driven
+// through string properties that every widget describes in a JSON manifest.
+// The window is a ChronoUI container with a root layout: a header row, a
+// body (a sidebar of pill buttons and a tabbed cell of pages), and a footer.
+// Each page is an IPanel with a grid; each card in the grid is a nested
+// two-row layout, a caption above one widget with a few properties set.
+// =============================================================================
+int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR cmdLine, int)
 {
-	auto* dlg = CreateChronoContainer(parent, L"", 640, 480, true);
-
-	auto* root = dlg->CreateRootLayout(3, 1);
-
-	root->SetRow(0, WidgetSize::System(StandardMetric::TitleBar));			// WindowTitle
-	root->SetRow(1, WidgetSize::Fill(), false, WidgetSize::Fixed(100));		// MessageBar
-	root->SetRow(2, WidgetSize::Fixed(48));									// ButtonBar
-
-	// Row 0, Cell 0 is your titlebar
-	root->GetCell(0, 0)->SetProperty("title", "Example equalizer");
-	root->GetCell(0, 0)->SetProperty("text-align", "left");
-
-	// Row 1, Cell 0 is body
-	{
-		// Example of a child layout (IPanel)
-		IPanel* subPanelVEqualizer = CreateChronoPanel(dlg);
-		IWidget* equ = root->GetCell(1, 0)->AddWidget(subPanelVEqualizer);
-		equ->SetProperty("height", "90%");
-
-		int channels = 10;
-		auto* panelLayout = subPanelVEqualizer->CreateLayout(1, channels);
-		{
-			for (int x = 0; x < channels; x++) {
-				auto vu = WidgetFactory::Create("cw.EqualizerBar.dll");
-				panelLayout->GetCell(0, x)->AddWidget(vu);
-
-				vu->SetProperty("vertical", "true");
-
-				// CHANGE 1: Invert direction (Top to Bottom)
-				vu->SetProperty("inverted", "true");
-
-				vu->SetProperty("segments", "20");
-
-				// CHANGE 2: Increase update speed for smoothness (25ms = 40 FPS)
-				// Previously 100ms
-				vu->AddTimer("AudioSim", 100);
-
-				vu->addEventHandler("AudioSim", [=](IWidget* sender, const char* json) {
-					static float time = 0.0f;
-					time += 0.05f; // Adjusted for smoothness
-
-					// Complex sine wave to simulate music dynamics
-					float val1 = (sin(time+x) * 0.5f + 0.5f) * (cos((time+x) * 3.0f) * 0.5f + 0.5f);
-					float val2 = (cos((time+x) + 1.0f) * 0.5f + 0.5f);
-
-					if (rand() % 40 == 0) val1 = 1.0f; // Adjusted rand probability for faster timer
-
-					sender->SetProperty("value", std::to_string(val2).c_str());
-				});
-			}
-		}
-
-		// Horizontal VU Meter (Right side / Bottom)
-		auto vuRight = WidgetFactory::Create("cw.EqualizerBar.dll");
-		root->GetCell(1, 0)->AddWidget(vuRight);
-		vuRight->SetProperty("vertical", "false");
-		vuRight->SetProperty("segments", "40");
-		vuRight->SetProperty("height", "10%");
-
-		// Update the horizontal bar to be smooth as well
-		vuRight->AddTimer("AudioSim", 100);
-		vuRight->addEventHandler("AudioSim", [=](IWidget* sender, const char* json) {
-			static float time = 0.0f;
-			time += 0.05f; // Adjusted for smoothness
-
-			// Complex sine wave to simulate music dynamics
-			float val1 = (sin(time) * 0.5f + 0.5f) * (cos(time * 3.0f) * 0.5f + 0.5f);
-			float val2 = (cos(time + 1.0f) * 0.5f + 0.5f);
-
-			if (rand() % 40 == 0) val1 = 1.0f; // Adjusted rand probability for faster timer
-
-			sender->SetProperty("value", std::to_string(val2).c_str());
-		});
-	}
-
-	// Row 2, Cell 0 is a button bar
-	root->GetCell(2, 0)->SetProperty("align-items", "center");
-	root->GetCell(2, 0)->AddWidget(
-		WidgetFactory::Create("cw.Button.dll")
-		->SetProperty("title", "Close")
-		->SetProperty("width", "25%")
-		->SetProperty("image_base64", myVirtualDrive.GetBase64(LR"(\mdifont48\cancel.png)").c_str())
-		->addEventHandler("onClick", [dlg](IWidget* sender, const char* json)
-	{
-		SendMessage(dlg->GetHWND(), WM_CLOSE, 0, 0);
-	}));
-
-	dlg->DoModal();
-
-	return 0;
-}
-
-int exampleGauges(HWND parent)
-{
-	auto* dlg = CreateChronoContainer(parent, L"", 640, 480, true);
-
-	auto* root = dlg->CreateRootLayout(3, 1);
-
-	root->SetRow(0, WidgetSize::System(StandardMetric::TitleBar));			// WindowTitle
-	root->SetRow(1, WidgetSize::Fill(), false, WidgetSize::Fixed(50));		// MessageBar, fill area, no split, min size 100px
-	root->SetRow(2, WidgetSize::Fixed(48));									// ButtonBar
-
-	// Row 0, Cell 0 is your titlebar
-	root->GetCell(0, 0)->SetProperty("title", "Example equalizer");
-	root->GetCell(0, 0)->SetProperty("text-align", "left");
-
-	// Row 1, Cell 0 is body
-	{
-		auto* gaugesLayout = root->GetCell(1, 0)->CreateLayout(1, 3);
-
-		gaugesLayout->GetCell(0, 0)
-			->AddWidget(WidgetFactory::Create("cw.GaugeBatteryLevelControl.dll"))
-			->AddTimer("UptTemp", 1000)
-			->addEventHandler("UptTemp", [&](IWidget* sender, const char* json) {
-			sender->SetProperty("value", std::to_string(10 + rand() % 5).c_str());
-		});
-
-		gaugesLayout->GetCell(0, 1)
-			->AddWidget(WidgetFactory::Create("cw.GaugeSpeedOmeter.dll"))
-			->AddTimer("UptSpeed", 1000)
-			->addEventHandler("UptSpeed", [&](IWidget* sender, const char* json) {
-			sender->SetProperty("value", std::to_string(rand() % 220).c_str());
-		});
-
-		gaugesLayout->GetCell(0, 2)
-			->AddWidget(WidgetFactory::Create("cw.GaugeEngineTemperatureControl.dll"))->AddTimer("UptTemp", 1000)
-			->AddTimer("UptBattery", 1000)
-			->addEventHandler("UptBattery", [&](IWidget* sender, const char* json) {
-			sender->SetProperty("value", std::to_string(rand() % 100).c_str());
-		});
-	}
-
-	root->GetCell(2, 0)->SetProperty("align-items", "center");
-	{
-		root->GetCell(2, 0)->AddWidget(
-			WidgetFactory::Create("cw.Button.dll")
-			->SetProperty("title", "Close")
-			->SetProperty("image_base64", myVirtualDrive.GetBase64(LR"(\mdifont48\cancel.png)").c_str())
-			->addEventHandler("onClick", [dlg](IWidget* sender, const char* json)
-		{
-			SendMessage(dlg->GetHWND(), WM_CLOSE, 0, 0);
-		}));
-	}
-
-	dlg->DoModal();
-
-	return 0;
-}
-
-int imageViewDialog(HWND parent)
-{
-	EnableWindow(parent, FALSE);
-
-	auto* dlg = CreateChronoContainer(parent, L"", 800, 600, true);
-
-	HWND hwnd = dlg->GetHWND();
-
-	// Main Layout: Title, Toolbar, Content Area
-	auto* root = dlg->CreateRootLayout(3, 1);
-	root->SetRow(0, WidgetSize::Fixed(getStandardMetric(StandardMetric::TitleBar)));
-	root->SetRow(1, WidgetSize::Fixed(getStandardMetric(StandardMetric::Toolbar)));
-	root->SetRow(2, WidgetSize::Fill());
-	
-
-	// --- ViewArea ---
-	auto* viewArea = root->GetCell(2, 0)->CreateLayout(1, 2);
-
-	// --- 1. Title Bar ---
-	root->GetCell(0, 0)->SetProperty("title", "Image Compare - Horizontal View");
-	root->GetCell(0, 0)->SetProperty("text-align", "center");
-
-	// --- 2. Toolbar ---
-	auto* toolbar = root->GetCell(1, 0)->CreateLayout(1, 4);
-	{
-		toolbar->SetCol(0, WidgetSize::Fixed(100));
-		toolbar->SetCol(1, WidgetSize::Fixed(100));
-		toolbar->SetCol(2, WidgetSize::Fill());
-		toolbar->SetCol(3, WidgetSize::Fixed(50));
-
-		toolbar->GetCell(0, 2)->SetProperty("title", "");
-
-		toolbar->GetCell(0, 0)->AddWidget(
-			WidgetFactory::Create("cw.Button.dll")->SetProperty("title", "Load Left")
-			->addEventHandler("onClick", [hwnd, viewArea](IWidget* sender, const char* json)
-			{
-				viewArea->GetCell(0, 0)->GetWidget(0)->SetProperty("zoom-fit", "");
-			}));
-		toolbar->GetCell(0, 1)->AddWidget(
-			WidgetFactory::Create("cw.Button.dll")->SetProperty("title", "Load Right")
-			->addEventHandler("onClick", [hwnd, viewArea](IWidget* sender, const char* json)
-			{
-				viewArea->GetCell(0, 1)->GetWidget(0)->SetProperty("zoom-fit", "");
-			}));
-		
-		toolbar->GetCell(0, 3)->AddWidget(
-			WidgetFactory::Create("cw.Button.dll")->SetProperty("title", "Close")
-			->addEventHandler("onClick", [hwnd, dlg](IWidget* sender, const char* json)
-			{
-				SendMessage(hwnd, WM_CLOSE, 0, 0);
-			}));
-	}
-
-	// --- 3. Image Viewer Area (Horizontal Split) ---
-	// Change: CreateLayout(1, 2) -> 1 Row, 2 Columns
-	{
-		// Define Column 0: Fills available space, Splitter = TRUE, Min Width = 100
-		viewArea->SetCol(0, WidgetSize::Fill(), true, WidgetSize::Fixed(100));
-
-		// Define Column 1: Fills remaining space
-		viewArea->SetCol(1, WidgetSize::Fill());
-
-		// --- Left Viewer (Column 0) ---
-		viewArea->GetCell(0, 0)->AddWidget(
-			WidgetFactory::Create("cw.ImageViewerWidget.dll")
-			->SetProperty("image-path", AssetPathA("images\\example1.jpg").c_str())
-			->SetProperty("zoom-fit", "")
-		);
-
-		// --- Right Viewer (Column 1) ---
-		viewArea->GetCell(0, 1)->AddWidget(
-			WidgetFactory::Create("cw.ImageViewerWidget.dll")
-			// Using a placeholder path or the same one for demonstration
-			->SetProperty("image-path", AssetPathA("images\\example1.jpg").c_str())
-			->SetProperty("zoom-fit", "")
-		);
-	}
-
-	dlg->CenterToParent();
-	dlg->Show();
-	dlg->RunMessageLoop();
-
-	BringWindowToTop(parent);
-	EnableWindow(parent, TRUE);
-
-	return 0;
-}
-
-// Helper: Check if file extension is an image
-bool IsImageFile(const fs::path& p)
-{
-	if (!p.has_extension()) return false;
-	std::string s = p.extension().string();
-	// Convert to lowercase for comparison
-	std::transform(s.begin(), s.end(), s.begin(),
-		[](unsigned char c) { return (char)::tolower(c); }
-	);
-	return (s == ".png" || s == ".jpg" || s == ".jpeg" || s == ".bmp" || s == ".gif");
-}
-
-// Helper: Open Windows Folder Picker
-std::wstring OpenFolderDialog(HWND owner)
-{
-	std::wstring result = L"";
-	IFileOpenDialog* pFileOpen;
-
-	// Create the FileOpenDialog object.
-	HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL,
-		IID_IFileOpenDialog, reinterpret_cast<void**>(&pFileOpen));
-
-	if (SUCCEEDED(hr))
-	{
-		DWORD dwOptions;
-		if (SUCCEEDED(pFileOpen->GetOptions(&dwOptions)))
-		{
-			// FOS_PICKFOLDERS ensures we select directories, not files
-			pFileOpen->SetOptions(dwOptions | FOS_PICKFOLDERS);
-		}
-
-		if (SUCCEEDED(pFileOpen->Show(owner)))
-		{
-			IShellItem* pItem;
-			if (SUCCEEDED(pFileOpen->GetResult(&pItem)))
-			{
-				PWSTR pszFilePath;
-				if (SUCCEEDED(pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath)))
-				{
-					result = pszFilePath;
-					CoTaskMemFree(pszFilePath);
-				}
-				pItem->Release();
-			}
-		}
-		pFileOpen->Release();
-	}
-	return result;
-}
-
-int ImageViewerExample(HWND parent)
-{
-	EnableWindow(parent, FALSE);
-
-	auto* dlg = CreateChronoContainer(parent, L"Image Browser", 1024, 768, true);
-	
-	HWND hwnd = dlg->GetHWND();
-
-	// --- Layout ---
-	// Row 0: Toolbar (50px)
-	// Row 1: Content Area (Sidebar + Viewer)
-	auto* root = dlg->CreateRootLayout(2, 1);
-
-	root->SetRow(0, WidgetSize::Fixed(45));
-	root->SetRow(1, WidgetSize::Fill());
-
-	// --- Toolbar ---
-	auto* toolbar = root->GetCell(0, 0)->CreateLayout(1, 3);
-
-	toolbar->SetCol(0, WidgetSize::Fixed(150)); // Open Button
-	toolbar->SetCol(1, WidgetSize::Fill());     // Path Label
-	toolbar->SetCol(2, WidgetSize::Fixed(100)); // Close Button
-
-	// --- Content Area (Splitter) ---
-	auto* content = root->GetCell(1, 0)->CreateLayout(1, 2);
-	// Col 0: File List (Sidebar), Col 1: Image Viewer
-	content->SetCol(0, WidgetSize::Fixed(250), true, WidgetSize::Fixed(100));
-	content->SetCol(1, WidgetSize::Fill());
-
-	ICell* fileListCell = content->GetCell(0, 0);
-	fileListCell->SetStackMode(ChronoUI::StackMode::Vertical);
-	fileListCell->EnableScroll(true);
-	// Style the sidebar slightly darker
-	fileListCell->SetProperty("background-color", "#f0f0f0");
-
-	ICell* imageCell = content->GetCell(0, 1);
-
-	// Create the Image Widget once
-	IWidget* imageWidget = WidgetFactory::Create("cw.ImageViewerWidget.dll");
-	imageWidget->SetProperty("zoom-fit", "true");
-	imageCell->AddWidget(imageWidget);
-
-	// Label to show current path
-	toolbar->GetCell(0, 1)->SetProperty("title", "No folder selected");
-
-	// --- State Management ---
-	// We use a shared_ptr to keep track of the widgets currently in the list
-	// so we can remove them when loading a new folder.
-	struct State {
-		std::vector<IWidget*> listWidgets;
-		std::wstring currentPath;
-	};
-	auto state = std::make_shared<State>();
-
-	// --- Function to Load Files ---
-	auto LoadFiles = [fileListCell, imageWidget, toolbar, state](std::wstring path)
-	{
-		// 1. Clear existing list widgets
-		for (auto* w : state->listWidgets) {
-			SafeDeleteWidget(fileListCell, w);
-		}
-		state->listWidgets.clear();
-		state->currentPath = path;
-
-		// Update Path Label
-		toolbar->GetCell(0, 1)->SetProperty("title", WideToNarrow(path).c_str());
-
-		// 2. Iterate Directory
-		try {
-			if (fs::exists(path) && fs::is_directory(path)) {
-				for (const auto& entry : fs::directory_iterator(path)) {
-					if (entry.is_regular_file() && IsImageFile(entry.path())) {
-						std::wstring filename = entry.path().filename().wstring();
-						std::wstring fullPath = entry.path().wstring();
-
-						// Create a button for the file
-						IWidget* btn = WidgetFactory::Create("cw.Button.dll");
-						btn->SetProperty("title", WideToNarrow(filename).c_str());
-						btn->SetProperty("align", "left");
-						btn->SetProperty("margin-bottom", "1");
-						btn->SetProperty("image_path", WideToNarrow(fullPath).c_str());
-
-						// Event: Click to load image
-						btn->addEventHandler("onClick", [imageWidget, fullPath](IWidget* sender, const char* json) {
-							// HERE is the requested functionality
-							imageWidget->SetProperty("image-path", WideToNarrow(fullPath).c_str());
-						});
-
-						fileListCell->AddWidget(btn);
-						state->listWidgets.push_back(btn);
-					}
-				}
-				fileListCell->UpdateWidgets();
-			}
-		}
-		catch (...) {
-			toolbar->GetCell(0, 1)->SetProperty("title", "Error accessing directory.");
-		}
-	};
-
-	// --- Toolbar Buttons ---
-
-	// [Open Folder]
-	toolbar->GetCell(0, 0)->AddWidget(
-		WidgetFactory::Create("cw.Button.dll")
-		->SetProperty("title", "Open Folder...")
-		->SetProperty("image_base64", myVirtualDrive.GetBase64(LR"(\mdifont48\folder-open.png)").c_str())
-		->addEventHandler("onClick", [hwnd, LoadFiles](IWidget* sender, const char* json) {
-		std::wstring folder = OpenFolderDialog(hwnd);
-		if (!folder.empty()) {
-			LoadFiles(folder);
-		}
-	})
-	);
-	toolbar->GetCell(0, 1)->SetProperty("title", "No folder selected");
-	// [Close]
-	toolbar->GetCell(0, 2)->AddWidget(
-		WidgetFactory::Create("cw.Button.dll")
-		->SetProperty("title", "Close")
-		->SetColor("face-color", RGB(222, 64, 64)) // Red button
-		->addEventHandler("onClick", [hwnd](auto...) {
-		SendMessage(hwnd, WM_CLOSE, 0, 0);
-	})
-	);
-
-	// Initial load (Optional: load current directory)
-	// LoadFiles(std::filesystem::current_path().wstring());
-
-	dlg->CenterToParent();
-	dlg->Show();
-	dlg->RunMessageLoop();
-
-	BringWindowToTop(parent);
-	EnableWindow(parent, TRUE);
-
-	return 0;
-}
-
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow) 
-{
-	std::shared_ptr<ChronoObservable<std::string>> editText = std::make_shared<ChronoObservable<std::string>>("");
-	std::shared_ptr<ChronoObservable<std::string>> currentTime = std::make_shared<ChronoObservable<std::string>>("");
-	std::shared_ptr<ChronoObservable<std::string>> title = std::make_shared<ChronoObservable<std::string>>("");
-	std::shared_ptr<ChronoObservable<bool>> isWorking = std::make_shared<ChronoObservable<bool>>(false);
-	std::shared_ptr<ChronoObservable<bool>> testing = std::make_shared<ChronoObservable<bool>>(false);
-	std::shared_ptr<ChronoObservable<std::string>> snowFreq = std::make_shared<ChronoObservable<std::string>>("50");
-
-	std::shared_ptr<ChronoObservable<std::string>> progTitle = std::make_shared<ChronoObservable<std::string>>("");
-
+	// The image viewer creates its WIC factory through COM; without an
+	// apartment on this thread that CoCreateInstance fails silently and every
+	// image stays blank. Nothing in the framework initialises COM for you.
+	CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 	StyleManager::LoadCSSFile(AssetPathA("bootstrap_lite.css").c_str());
-
 	myVirtualDrive.Open(AssetPathW(L"resources.pak").c_str(), nullptr);
+	auto icon = [](const wchar_t* name) {
+		return myVirtualDrive.GetBase64((std::wstring(LR"(\mdifont48\)") + name + L".png").c_str());
+	};
 
-	auto* win = CreateChronoContainer(GetDesktopWindow(), L"ChronoUI - Tabbed Workspace", 1280, 720, true);
+	// State shared with widgets through observables: set the variable, the UI follows.
+	auto status      = std::make_shared<ChronoObservable<std::string>>("23 widgets, one ChronoUI.dll, styled by assets/bootstrap_lite.css.");
+	auto sliderValue = std::make_shared<ChronoObservable<std::string>>("50");
+	auto sliderText  = std::make_shared<ChronoObservable<std::string>>("Value: 50");
+	auto switchOn    = std::make_shared<ChronoObservable<bool>>(true);
+	auto waiting     = std::make_shared<ChronoObservable<bool>>(true);
 
-	// Not ready yet, hard flickering !!
-	//win->SetOverlay(WidgetFactory::Create("cw.WaitingOverlay.dll"))->Bind("waiting", isWorking);
+	const COLORREF kInk = RGB(17, 24, 39), kMuted = RGB(107, 114, 128), kBorder = RGB(229, 231, 235);
+	auto text = [&](const char* s, int size, bool bold, COLORREF col) {
+		IWidget* t = WidgetFactory::Create("cw.StaticText.dll");
+		t->SetProperty("title", s)->SetProperty("font-size", std::to_string(size).c_str())->SetProperty("text-align", "left");
+		if (bold) t->SetProperty("font-style", "bold");
+		t->SetColor("foreground-color", col);
+		return t;
+	};
 
-	auto* root = win->CreateRootLayout(4, 1);
+	// Cell padding only insets a nested layout, so an inset area is a 1x1 layout
+	// inside a padded cell; the returned cell is the one to stack widgets in.
+	auto inset = [](ICell* cell, const char* pad) -> ICell* {
+		cell->SetProperty("padding", pad);
+		ILayout* l = cell->CreateLayout(1, 1);
+		l->SetProperty("border-width", "0");
+		return l->GetCell(0, 0);
+	};
 
+	auto* win = CreateChronoContainer(GetDesktopWindow(), L"ChronoUI \x2014 Widgets", 1280, 820, false);
 	HWND hwnd = win->GetHWND();
+	auto* root = win->CreateRootLayout(3, 1);
+	root->SetProperty("border-width", "0");
+	root->SetRow(0, WidgetSize::Fixed(88));
+	root->SetRow(1, WidgetSize::Fill());
+	root->SetRow(2, WidgetSize::Fixed(40));
 
-	root->SetRow(0, WidgetSize::Fixed(getStandardMetric(StandardMetric::TitleBarThin)));	// Toolbar
-	root->SetRow(1, WidgetSize::Fixed(getStandardMetric(StandardMetric::Toolbar)));	// Title Bar
-	root->SetRow(2, WidgetSize::Fill(), false, WidgetSize::Fill(0.25f)); // Main Panel
-	root->SetRow(3, WidgetSize::Fixed(64), false, WidgetSize::Fixed(50.0)); // Footer
-
-	// --- 1. TOOLBAR ---
-	auto* toolbar = root->GetCell(0, 0)->CreateLayout(1, 3);
+	// --- header ------------------------------------------------------------
 	{
-		toolbar->SetProperty("border-width", "0");
+		ICell* h = inset(root->GetCell(0, 0), "16");
+		h->SetStackMode(StackMode::Vertical);
+		h->SetProperty("gap", "2");
+		h->AddWidget(text("ChronoUI widgets", 20, true, kInk))->SetProperty("height", "30");
+		h->AddWidget(text("The 23 hot-pluggable DLL widgets, one family per page. Every card is one widget created by name with a few properties set.", 11, false, kMuted))->SetProperty("height", "18");
+	}
 
-		toolbar->SetCol(0, WidgetSize::Fill());
-		toolbar->SetCol(1, WidgetSize::Fill());
-		toolbar->SetCol(2, WidgetSize::Fixed(getStandardMetric(StandardMetric::WindowMenu)));
+	// --- body: sidebar + pages ------------------------------------------------
+	auto* body = root->GetCell(1, 0)->CreateLayout(1, 2);
+	body->SetProperty("border-width", "0");
+	body->SetColor("background-color", RGB(243, 243, 243));   // the page; cards sit white on it
+	body->SetCol(0, WidgetSize::Fixed(224));
+	body->SetCol(1, WidgetSize::Fill());
+	ICell* side = inset(body->GetCell(0, 0), "12");
+	side->SetStackMode(StackMode::Vertical);
+	side->SetProperty("gap", "6");
+	ICell* pages = body->GetCell(0, 1);
+	pages->SetStackMode(StackMode::Tabbed);
 
-		auto leftBar = toolbar->GetCell(0, 0);
-		auto titleBar = toolbar->GetCell(0, 1);
-		auto rightBar = toolbar->GetCell(0, 2);
-
-		leftBar->SetStackMode(ChronoUI::StackMode::CommandBar);
-		
-		rightBar->SetStackMode(ChronoUI::StackMode::CommandBar);
-		rightBar->SetProperty("overflow", "false"); // Disable overflow handling
-		rightBar->SetProperty("justify-content", "right");
-
-		auto btnOpen = WidgetFactory::Create("cw.Button.dll");
-		leftBar->AddWidget(btnOpen)
-			->SetProperty("tt_title", "Open Image viewer")
-			->SetProperty("arrow", "true")
-			->SetProperty("border-width", "1px")
-			->SetProperty("image_base64", myVirtualDrive.GetBase64(LR"(\mdifont48\folder-open-outline.png)").c_str())
-			->Bind("disabled", isWorking)
-			->addEventHandler("onClick", [hwnd](auto...)
-		{
-			ImageViewerExample(hwnd);
+	static std::vector<IWidget*> nav;
+	// A page = a pill button in the sidebar + an IPanel with a grid in the tabbed cell.
+	auto addPage = [&](const char* title, const wchar_t* iconName, int rows, int cols) -> ILayout* {
+		IPanel* panel = CreateChronoPanel(win);
+		pages->AddWidget(panel);
+		ILayout* grid = panel->CreateLayout(rows, cols);
+		grid->SetProperty("border-width", "0");
+		grid->SetProperty("row-gap", "14"); grid->SetProperty("col-gap", "14");
+		int index = (int)nav.size();
+		IWidget* b = WidgetFactory::Create("cw.Button.dll");
+		b->SetProperty("title", title)->SetProperty("is_pill", "true")->SetProperty("align", "left")
+		 ->SetProperty("image_base64", icon(iconName).c_str())->SetProperty("height", "40");
+		b->addEventHandler("onClick", [index, pages](IWidget* sender, const char*) {
+			for (auto* n : nav) n->SetProperty("checked", n == sender ? "true" : "false");
+			pages->SetActiveTab(index);
 		});
-		StyleManager::AddClass(btnOpen, "btn-primary");
+		side->AddWidget(b);
+		nav.push_back(b);
+		return grid;
+	};
+	// A card = a white block on the grey page: a 2x1 layout, caption row above
+	// the content cell. Colours and properties set on a layout are inherited by
+	// everything inside it (cells and widgets alike), which is why the card's
+	// border-width is pinned to 0: otherwise every widget in it would draw one.
+	auto card = [&](ILayout* grid, int r, int c, const char* caption) -> ICell* {
+		ILayout* k = grid->GetCell(r, c)->CreateLayout(2, 1);
+		k->SetProperty("border-width", "0");
+		k->SetColor("background-color", RGB(255, 255, 255));
+		k->SetRow(0, WidgetSize::Fixed(30));
+		k->SetRow(1, WidgetSize::Fill());
+		inset(k->GetCell(0, 0), "8")->AddWidget(text(caption, 10, true, kMuted))->SetProperty("width", "330");
+		return inset(k->GetCell(1, 0), "10");
+	};
 
-		
-		leftBar->AddWidget(
-			WidgetFactory::Create("cw.SwitchButton.dll")
-			->SetProperty("title", "SetWorking")
-			->Bind("checked", isWorking)
-			->addEventHandler("onChange", [win, isWorking](IWidget* sender, const char* json)
-		{
-			std::string j = json;
-			if (j == "true") {
-				*isWorking = true;
-			} else {
-				*isWorking = false;
-			}
-		}));
-		/*
-		leftBar->AddWidget(
-			WidgetFactory::Create("cw.Button.dll")
-			->SetProperty("title", "Dark")
-			->SetProperty("align", "left")
-			->Bind("disabled", isWorking)
-			->SetProperty("image_base64", myVirtualDrive.GetBase64(LR"(\mdifont48\lightbulb.png)").c_str())
-			->addEventHandler("onClick", [win, testing](auto...)
-		{
-			*testing = !*testing;
-			setDarkStyle(win);
-		}));
-		*/
-
-		leftBar->AddWidget(
-			WidgetFactory::Create("cw.Button.dll")
-			->SetProperty("title", "Dialog")
-			->SetProperty("align", "left")
-			->Bind("disabled", isWorking)
-			->SetProperty("image_base64", myVirtualDrive.GetBase64(LR"(\mdifont48\window-closed-variant.png)").c_str())
-			->addEventHandler("onClick", [&](auto...)
-		{ 
-			funMessageBox(win->GetHWND(), "Success", "User deleted successfully.", CMB_OK | CMB_ICON_SUCCESS, &myVirtualDrive);
-		}));
-
-		leftBar->AddWidget(WidgetFactory::Create("cw.EyesControl.dll"))
-			->AddOverlay(
-				WidgetFactory::Create("cw.LightingStormOverlay.dll")
-				->Bind("active", isWorking)
-				->SetProperty("intensity", "200")
-			);
-		
-		titleBar->AddWidget(
-			WidgetFactory::Create("cw.StaticText.dll"))
-			->Bind("title", title)
-			->AddTimer("UptTitle", 1000)
-			->addEventHandler("UptTitle", [&](IWidget* sender, const char* json) {
-			auto now = system_clock::now();
-			std::time_t t = system_clock::to_time_t(now);
-			std::tm tm{};
-			localtime_s(&tm, &t);   // MSVC-safe
-			char buf[64];
-			std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm);
-			*currentTime = buf;
-			*title = std::string("Window Title - Now: ") + buf;
-			});
-
-		
-		/*
-		rightBar->AddWidget(
-			WidgetFactory::Create("cw.Button.dll")
-			->SetProperty("width", std::to_string(getStandardMetric(StandardMetric::CaptionButton)).c_str())
-			->SetProperty("tt_title", "Light")
-			->Bind("disabled", isWorking)
-			->SetProperty("image_base64", myVirtualDrive.GetBase64(LR"(\mdifont48\lightbulb-on-10.png)").c_str())
-			->addEventHandler("onClick", [win](auto...)
-		{
-			setLightStyle(win);
-		}));
-		rightBar->AddWidget(
-			WidgetFactory::Create("cw.Button.dll")
-			->SetProperty("width", std::to_string(getStandardMetric(StandardMetric::CaptionButton)).c_str())
-			->SetProperty("tt_title", "Dark")
-			->SetProperty("align", "left")
-			->Bind("disabled", isWorking)
-			->SetProperty("image_base64", myVirtualDrive.GetBase64(LR"(\mdifont48\lightbulb.png)").c_str())
-			->addEventHandler("onClick", [win](auto...)
-		{
-			setDarkStyle(win);
-		}));
-		*/
-
-		// Minimize
-		rightBar->AddWidget(
-			WidgetFactory::Create("cw.Button.dll")
-			->SetProperty("width", std::to_string(getStandardMetric(StandardMetric::CaptionButton)).c_str())
-			->SetProperty("tt_title", "Minimize")
-			->SetProperty("align", "left")
-			->SetProperty("image_base64", myVirtualDrive.GetBase64(LR"(\mdifont48\window-minimize.png)").c_str())
-			->addEventHandler("onClick", [hwnd](auto...) 
-			{ ShowWindow(hwnd, SW_MINIMIZE); }));
-
-		rightBar->AddWidget(
-			WidgetFactory::Create("cw.Button.dll")
-			->SetProperty("width", std::to_string(getStandardMetric(StandardMetric::CaptionButton)).c_str())
-			->SetProperty("tt_title", "Maximize/Restore")
-			->SetProperty("image_base64", 
-				myVirtualDrive.GetBase64(LR"(\mdifont48\window-restore.png)").c_str()
-			)
-			->addEventHandler("onClick", [hwnd, win](IWidget* sender, const char* json)
-			{ 
-				ShowWindow(hwnd, IsZoomed(hwnd) ? SW_RESTORE : SW_MAXIMIZE); 
-				sender->SetProperty("image_base64", IsZoomed(win->GetHWND()) ? myVirtualDrive.GetBase64(LR"(\mdifont48\window-restore.png)").c_str() : myVirtualDrive.GetBase64(LR"(\mdifont48\window-maximize.png)").c_str());
-			})
-		);
-		rightBar->AddWidget(
-			WidgetFactory::Create("cw.Button.dll")
-			->SetProperty("width", std::to_string(getStandardMetric(StandardMetric::CaptionButton)).c_str())
-			->Bind("disabled", isWorking)
-			->SetProperty("tt_title", "Close")
-			->SetProperty("image_base64", myVirtualDrive.GetBase64(LR"(\mdifont48\window-close.png)").c_str())
-			->addEventHandler("onClick", [](auto...) { PostQuitMessage(0); })
-			->SetColor("background-color", RGB(222, 64, 64))
-			->SetColor("background-color:hover", RGB(255, 64, 64))
-			->SetColor("foreground-color", RGB(0, 0, 0))
-		);
-	}
-
-	// --- 2. TITLE BAR ---
-	ICell* titleBar = root->GetCell(1, 0);
-
-	titleBar->SetStackMode(ChronoUI::StackMode::CommandBar);
-
-	titleBar->SetProperty("align-items", "normal");
-	titleBar->SetProperty("justify-content", "right");
-	titleBar->SetProperty("overflow", "true"); // Disable overflow handling
-
-	titleBar->AddWidget(WidgetFactory::Create("cw.StaticText.dll"))
-		->SetProperty("title", "Main Title Bar")
-		->SetProperty("font-style", "bold")
-		->SetProperty("width", "auto")
-		->SetProperty("text-align", "center")
-		->addEventHandler("onClick", [hwnd](IWidget* sender, const char* json)
-		{  
-			sender->SetProperty("title", "Main Title Bar clicked!!");
-		}
-		);
-
-	titleBar->AddWidget(WidgetFactory::Create("cw.EditBox.dll"))
-		->Bind("value", editText)
-		->Bind("disabled", isWorking)
-		->SetProperty("image_base64", myVirtualDrive.GetBase64(LR"(\mdifont48\magnify.png)").c_str())
-		->SetProperty("height", std::to_string(getStandardMetric(StandardMetric::EditBoxHeight)).c_str())
-		->SetProperty("width", "220")
-		->SetProperty("placeholder", "Write your search here");
-
-	for (int x = 0; x < 20; x++) {
-		std::string btnTitle = "Button " + std::to_string(x + 1);
-		titleBar->AddWidget(
-			WidgetFactory::Create("cw.Button.dll")
-			->SetProperty("title", btnTitle.c_str())
-			->SetProperty("width", "120px")
-			->SetProperty("image_base64", myVirtualDrive.GetBase64(LR"(\mdifont48\lightbulb.png)").c_str())
-			->addEventHandler("onClick", [hwnd, btnTitle, titleBar](IWidget* sender, const char* json)
-				{
-					titleBar->GetWidget(0)->SetProperty("title", btnTitle.c_str());
-				}
-			));
-	}
-
-	// --- 3. WORKSPACE ---
+	// --- 1. Gauges & time -------------------------------------------------------
 	{
-		auto* work = root->GetCell(2, 0)->CreateLayout(1, 3);
-
-		// Sidebar (Col 0)
-		work->SetCol(0, WidgetSize::Fixed(200), false, WidgetSize::Fixed(64));
-		// Viewer
-		work->SetCol(1, WidgetSize::Fill(0.8f), true, WidgetSize::Percent(30));
-		// Properties/Inspector (Col 2)
-		work->SetCol(2, WidgetSize::Fill(0.2f), false, WidgetSize::Percent(10));
-
-		ICell* sidebar = work->GetCell(0, 0);
-		{
-			sidebar->SetStackMode(ChronoUI::StackMode::Vertical);
-			sidebar->EnableScroll(true);
-
-			sidebar->AddWidget(WidgetFactory::Create("cw.Button.dll"))
-				->SetProperty("title", "Expand/Collapse")
-				->SetProperty("align", "right")
-				->SetProperty("is_pill", "true")
-				->SetProperty("border-width", "0")
-				->SetProperty("image_base64", myVirtualDrive.GetBase64(LR"(\mdifont48\arrow-collapse.png)").c_str())
-				->addEventHandler("onClick", [work](IWidget* sender, const char* json)
-			{
-				if (work->IsColumnCollapsed(2))
-					work->RestoreColumn(2);
-				else
-					work->CollapseColumn(2);
-
-				if (work->IsColumnCollapsed(0))
-					work->RestoreColumn(0);
-				else
-					work->CollapseColumn(0);
-			}
-				)
-				->SetColor("StaticText:background-color", RGB(255, 200, 200));
-
-			sidebar->AddWidget(WidgetFactory::Create("cw.Button.dll"))
-				->SetProperty("title", "ImageViewer Example")
-				->SetProperty("is_pill", "true")
-				->SetProperty("image_base64", myVirtualDrive.GetBase64(LR"(\mdifont48\image-album.png)").c_str())
-				->SetColor("StaticText:background-color", RGB(255, 200, 200))
-				->addEventHandler("onClick", [hwnd](IWidget* sender, const char* json) {ImageViewerExample(hwnd);
-			});
-
-			sidebar->AddWidget(WidgetFactory::Create("cw.Button.dll"))
-				->SetProperty("title", "5 chan Equalizer dialog")
-				->SetProperty("is_pill", "true")
-				->SetProperty("image_base64", myVirtualDrive.GetBase64(LR"(\mdifont48\soundbar.png)").c_str())
-				->addEventHandler("onClick", [hwnd](IWidget* sender, const char* json) {
-					exampleEqualizer(hwnd);
-			});
-			sidebar->AddWidget(WidgetFactory::Create("cw.Button.dll"))
-				->SetProperty("title", "Gauges dialog")
-				->SetProperty("is_pill", "true")
-				->SetProperty("image_base64", myVirtualDrive.GetBase64(LR"(\mdifont48\speedometer.png)").c_str())
-				->addEventHandler("onClick", [hwnd](IWidget* sender, const char* json) {
-				exampleGauges(hwnd);
-			});			
-			sidebar->AddWidget(WidgetFactory::Create("cw.Button.dll"))
-				->SetProperty("image_base64", myVirtualDrive.GetBase64(LR"(\mdifont48\incognito.png)").c_str())
-				->SetProperty("title", "Login dialog")
-				->SetProperty("arrow", "true")
-				->SetProperty("is_pill", "true")
-				->SetColor("StaticText:background-color", RGB(100, 200, 110))
-				->addEventHandler("onClick", [&](IWidget* sender, const char* json) {
-				// Example usage inside wWinMain or an event handler:
-				std::string user = "";
-				std::string pass = "";
-
-				if (ExampleLoginDlg(win->GetHWND(), user, pass)) {
-					// Login successful
-					std::string msg = "Login Successful!\nUser: " + user;
-					funMessageBox(win->GetHWND(), msg.c_str(), "Success", CMB_OK, &myVirtualDrive);
-
-					// Update main window title or state here
-					*title = "Logged in as: " + user;
-				}
-				else {
-					// User clicked Cancel or closed the window
-					funMessageBox(win->GetHWND(), "Login Cancelled", "Info", CMB_OK, &myVirtualDrive);
-				}
-			});
-
-			sidebar->AddWidget(WidgetFactory::Create("cw.Button.dll"))
-				->SetProperty("image_base64", myVirtualDrive.GetBase64(LR"(\mdifont48\account-box-plus-outline.png)").c_str())
-				->SetProperty("title", "Create new account example")
-				->SetProperty("arrow", "true")
-				->SetProperty("is_pill", "true")
-				->SetColor("StaticText:background-color", RGB(100, 200, 110))
-				->addEventHandler("onClick", [&](IWidget* sender, const char* json) {
-				std::string newEmail, newPass;
-				if (ExampleRegisterDlg(win->GetHWND(), newEmail, newPass)) {
-					std::string msg = "Registration Complete!\nUser: " + newEmail;
-					funMessageBox(
-						win->GetHWND(),
-						msg.c_str(), "Welcome", CMB_OK | CMB_ICON_INFO, &myVirtualDrive);
-				}
-			});
-
-			sidebar->AddWidget(WidgetFactory::Create("cw.Button.dll"))
-				->SetProperty("image_base64", myVirtualDrive.GetBase64(LR"(\mdifont48\message-alert-outline.png)").c_str())
-				->SetProperty("title", "MessageBox Question")
-				->SetProperty("is_pill", "true")
-				->addEventHandler("onClick", [&](IWidget* sender, const char* json) {
-				int choice = funMessageBox(
-					win->GetHWND(),
-					"Delete Account?",
-					"Are you sure you want to permanently delete this user? This action cannot be undone.",
-					CMB_YESNO | CMB_ICON_WARNING, &myVirtualDrive
-				);
-
-				if (choice == IDYES) {
-					funMessageBox(win->GetHWND(), "Success", "User deleted successfully.", CMB_OK | CMB_ICON_SUCCESS);
-				}
-			});
-
-			sidebar->AddWidget(WidgetFactory::Create("cw.Button.dll"))
-				->SetProperty("image_base64", myVirtualDrive.GetBase64(LR"(\mdifont48\message-alert-outline.png)").c_str())
-				->SetProperty("title", "MessageBox Error")
-				->SetProperty("is_pill", "true")
-				->addEventHandler("onClick", [&](IWidget* sender, const char* json) {
-				funMessageBox(
-					win->GetHWND(),
-					"Connection Failed",
-					"Unable to reach the remote database.\nPlease check your internet connection and try again.",
-					CMB_OK | CMB_ICON_ERROR
-				);
-			});
-
-			sidebar->AddWidget(
-				WidgetFactory::Create("cw.StaticText.dll")
-				->SetProperty("title", "- Test edit box, write 'ok' -")
-				->SetProperty("text-align", "center")
-				->SetProperty("height", "20")
-			);
-			sidebar->AddWidget(WidgetFactory::Create("cw.EditBox.dll"))
-				->Bind("value", editText)
-				->Bind("disabled", isWorking)
-				->SetProperty("image_base64", myVirtualDrive.GetBase64(LR"(\mdifont48\magnify.png)").c_str())
-				->SetProperty("height", std::to_string(getStandardMetric(StandardMetric::EditBoxHeight)).c_str())
-				->SetProperty("placeholder", "Write ok to validate edit box")
-				->OnValidate([&](IWidget* sender, const char* payload) {
-				std::string val = payload;
-
-				if (val != "ok") {
-					// Set error state
-					sender->SetProperty("validation-error", "Value must be 'ok'");
-					return false;
-				}
-				// You can use the helper mentioned in the prompt
-				return true;
-			});
-			
-
-
-			sidebar->AddWidget(WidgetFactory::Create("cw.TextSlider.dll"))
-				->Bind("text", currentTime);
-
-			static CpuMonitor g_cpuMonitor;
-
-			// 2. Add the Widget
-			sidebar->AddWidget(WidgetFactory::Create("cw.DataPlotControl.dll"))
-				// --- Visual Configuration ---
-				->SetProperty("label_y", "CPU Load")
-				->SetProperty("label_x", "History (60s)")
-				->SetProperty("units", "%")
-				->SetProperty("min", "0")
-				->SetProperty("max", "100")
-				->SetProperty("steps", "60")           // Keep last 60 data points
-				->SetProperty("plot_color", "#00FFEA") // Cyan/Electric Blue line
-				->SetProperty("grid_color", "#223333") // Dark teal grid
-
-				// --- Logic Configuration ---
-				->AddTimer("UpdateCpu", 1000)          // Tick every 1000ms (1 second)
-				->addEventHandler("UpdateCpu", [&](IWidget* sender, const char* json) {
-
-				// 1. Get real CPU data
-				double usage = g_cpuMonitor.GetUsage();
-
-				// 2. Format to string
-				std::string valStr = std::to_string(usage);
-
-				// 3. Push to plot
-				// This triggers the "add_value" logic in OnPropertyChanged
-				sender->SetProperty("add_value", valStr.c_str());
-			});
-
-			sidebar->AddWidget(WidgetFactory::Create("cw.SliderControl.dll"))
-				->Bind("value", snowFreq);
-
-			// 1. Create a container (assuming you have a 'row' or 'sidebar')
-			auto clockWidget = WidgetFactory::Create("cw.AnalogClock.dll");
-			// 4. Add to UI
-			sidebar->AddWidget(clockWidget);
-			clockWidget->AddOverlay(
-				WidgetFactory::Create("cw.SnowingOverlay.dll")
-				->SetProperty("active", "true")
-				->Bind("freq", snowFreq)
-				->SetProperty("size", "4")
-			);
-			clockWidget->SetProperty("width", "100%");        // Set CSS size
-			clockWidget->SetProperty("height", "150");
-			clockWidget->SetProperty("face_color", "#E0E0E0"); // Light gray ring
-			clockWidget->SetProperty("hand_color", "#FFFFFF"); // White hands
-			clockWidget->SetProperty("show_seconds", "true");  // Enable second hand
-
-			// 3. Add Event Handler
-			clockWidget->addEventHandler("onClick", [](IWidget* sender, const char* json) {
-				MessageBoxA(NULL, "Time waits for no one!", "Clock Clicked", MB_OK | MB_ICONINFORMATION);
-			});
-		}
-
-
-		// --- MAIN VIEW AREA (Col 1) ---
-		{
-			// Create a layout inside the main area: Row 0 for Selector, Row 1 for Content
-			auto* mainLayout = work->GetCell(0, 1)->CreateLayout(2, 1);
-
-			mainLayout->SetRow(0, WidgetSize::Fixed(25)); // Tab Selector Height
-			mainLayout->SetRow(1, WidgetSize::Fill());    // Tab Content Area
-
-			// Tab Selector (Row 0)
-			ICell* tabSelector = mainLayout->GetCell(0, 0);
-			tabSelector->SetStackMode(ChronoUI::StackMode::Horizontal);
-			//tabSelector->EnableScroll(true);
-
-			// 2. Create Buttons and Link them via Events
-			const wchar_t* labels[] = { L" Main.cpp ", L" App.config ", L" Style.css " };
-
-			// Tab Content (Row 1)
-			ICell* tabContent = mainLayout->GetCell(1, 0);
-
-			{
-				tabContent->SetStackMode(StackMode::Tabbed); // Documents are stacked
-				tabContent->AddWidget(WidgetFactory::Create("cw.ImageViewerWidget.dll"))
-					->AddOverlay(
-						WidgetFactory::Create("cw.WaitingOverlay.dll")
-						->Bind("waiting", isWorking)
-					)
-					->SetProperty("image-path", 
-						AssetPathA("images\\example1.jpg").c_str());
-
-				tabContent->AddWidget(
-					WidgetFactory::Create("cw.StaticText.dll")
-					->SetProperty("title", "// Main.cpp code editor view")
-					->SetColor("StaticText:background-color", RGB(192, 30, 192))
-				);
-				tabContent->AddWidget(
-					WidgetFactory::Create("cw.StaticText.dll")
-					->SetProperty("title", "# CSS Stylesheet View #")
-					->SetColor("StaticText:background-color", RGB(25, 192, 192))
-				);
-
-				// We store args in a static or long-lived container so pointers remain valid
-				static std::map<int, IWidget*> tabButtons;
-				for (int i = 0; i < 3; i++) {
-					IWidget* btn = WidgetFactory::Create("cw.Button.dll")
-						->SetProperty("Button:font-style", "bold")
-						->SetProperty("title", WideToNarrow(labels[i]).c_str());
-					btn->addEventHandler("onClick", [=](IWidget* sender, const char* json) mutable {
-						for (int x = 0; x < 3; x++) {
-							tabButtons[x]->SetProperty("checked", (sender== tabButtons[x])?"true":"false");
-						}
-						tabContent->SetActiveTab(i);
-					});
-
-					tabSelector->AddWidget(btn);
-
-					tabButtons[i] = btn;
-				}
-
-				// Set default active document
-				tabContent->SetActiveTab(0);
-			}
-		}
-
-		// Properties Panel (Col 2)
-		ICell* props = work->GetCell(0, 2);
-		props->SetStackMode(ChronoUI::StackMode::Vertical);
-		props->EnableScroll(true);
-
-		props->AddWidget(WidgetFactory::Create("cw.AnimatedParticlesProgress.dll"))
-			->SetProperty("title", "cw.AnimatedParticlesProgress.dll")
-			->SetColor("background-color", RGB(70, 255, 80));
-
-		props->AddWidget(WidgetFactory::Create("cw.VitalsMonitor.dll"));
-
-		props->AddWidget(WidgetFactory::Create("cw.TitleDescCard.dll"))
-			->SetProperty("height", "140")
-			->AddOverlay(
-				WidgetFactory::Create("cw.SnowingOverlay.dll")
-				->SetProperty("freq", "80")
-				->SetProperty("size", "2")
-			)
-			->SetProperty("title", "Snowing overlay")
-			->SetProperty("top_text", "Top text")
-			->SetProperty("description", "This panel displays contextual information related to the selected item.\r\nUse it to review details, status, and relevant metadata before taking action.\r\nChanges made here are applied immediately and may affect related elements.")
-			->SetProperty("image_base64", myVirtualDrive.GetBase64(LR"(\mdifont48\spider-web.png)").c_str());
-
-		props->AddWidget(WidgetFactory::Create("cw.TitleDescCard.dll"))
-			->SetProperty("height", "140")
-			->Bind("title", currentTime)
-			->SetProperty("top_text", "No image")
-			->SetProperty("description", "This panel displays contextual information related to the selected item.\r\nUse it to review details, status, and relevant metadata before taking action.\r\nChanges made here are applied immediately and may affect related elements.");
-
-		{
-			// 1. Create the List Control
-			auto myList = WidgetFactory::Create("cw.ListCards.dll");
-
-			// 2. Configure Layout Properties
-			myList->SetProperty("height", "500");
-
-			// 3. Register Images (Format: "imageID|base64String")
-			// Assuming 'myVirtualDrive' is your resource helper from the previous snippet
-			std::string iconUser = "img_user|" + myVirtualDrive.GetBase64(LR"(\mdifont48\soy-sauce.png)");
-			std::string iconSettings = "img_settings|" + myVirtualDrive.GetBase64(LR"(\mdifont48\spa-outline.png)");
-			std::string iconAlert = "img_alert|" + myVirtualDrive.GetBase64(LR"(\mdifont48\sticker-alert-outline.png)");
-
-			myList->SetProperty("addImage", iconUser.c_str());
-			myList->SetProperty("addImage", iconSettings.c_str());
-			myList->SetProperty("addImage", iconAlert.c_str());
-
-			// 4. Add Items (Format: "id|title|description|imageID")
-			// Note: The pipe '|' is the delimiter used in the ListCards::OnPropertyChanged logic
-			for (int x = 0; x < 10; x++) {
-				myList->SetProperty("addItem", "usr_01|cw.ListCards.dll|A simple card list control|img_user");
-				myList->SetProperty("addItem", "sys_conf|Configuration|Modify system preferences and defaults|img_settings");
-				myList->SetProperty("addItem", "alert_99|System Update|Critical security patch available|img_alert");
-				myList->SetProperty("addItem", "note_01|Simple Note|This item has no icon attached|");
-			}
-			
-
-			// 5. Handle Events
-			myList->addEventHandler("onItemClick", [](IWidget* widget, const char* jsonArgs) {
-				// jsonArgs example: {"index":1,"id":"sys_conf"}
-			});
-
-			// 6. Add to layout
-			props->AddWidget(myList);
-		}
-
-		for (int i = 1; i <= 20; i++) {
-			std::wstring prop = L"Properties " + std::to_wstring(i);
-
-			props->AddWidget(WidgetFactory::Create("cw.StaticText.dll"))
-				->SetProperty("title", WideToNarrow(prop).c_str())
-				->SetColor("StaticText:background-color", RGB(70, 70 + (i * 20), 80))
-				->SetColor("StaticText:foreground-color", RGB(70, 70 - (i * 20), 80));
-		}
-	}
-
-	// --- 4. BOTTOM BAR ---
-	ICell* bottomBar = root->GetCell(3, 0);
-	bottomBar->SetStackMode(ChronoUI::StackMode::Horizontal);
-	bottomBar->EnableScroll(true);
-	
-	{
-		IWidget* widget = WidgetFactory::Create("cw.ViewDateTimeWidget.dll");
-		widget->SetProperty("text-align", "right");
-		bottomBar->AddWidget(widget);
-	}
-	{
-		IWidget* widget = WidgetFactory::Create("cw.AnimatedParticlesProgress.dll")
-			->Bind("title", progTitle)
-			->SetProperty("justify-content", "flex-start")
-			->SetColor("background-color", RGB(190, 255, 190))
-			->SetColor("foreground-color", RGB(0, 0, 0));
-
-		bottomBar->AddWidget(widget);
-	}
-	{
-		float progress = 0.0f;
-		bottomBar->AddWidget(WidgetFactory::Create("cw.Progress.dll"))
-			->SetProperty("title", "In progress...")
-			->AddTimer("Step", 100)
-			->addEventHandler("Step", [&](IWidget* sender, const char* json) {
-				progress++;
-				if (progress > 100.0f) progress = 0.0f;
-				sender->SetProperty("value", std::to_string(progress).c_str());
-				*progTitle = "Progress:\r\n" + std::to_string((int)progress) + "%";
+		ILayout* g = addPage("Gauges & time", L"speedometer", 2, 3);
+		auto* speed = card(g, 0, 0, "cw.GaugeSpeedOmeter")->AddWidget(WidgetFactory::Create("cw.GaugeSpeedOmeter.dll"));
+		speed->SetProperty("label", "Speed")->SetProperty("unit", "km/h")->SetProperty("min", "0")->SetProperty("max", "240")->SetProperty("value", "120");
+		auto phase = std::make_shared<float>(0.0f);
+		speed->AddTimer("tick", 50)->addEventHandler("tick", [phase](IWidget* s, const char*) {
+			*phase += 0.04f;
+			s->SetProperty("value", std::to_string((int)(120.0f + 95.0f * std::sin(*phase))).c_str());
 		});
-	}
-	for (int i = 1; i <= 35; i++) {
-		std::wstring status = L"Status log " + std::to_wstring(i + 1);
-		IWidget* widget = WidgetFactory::Create("cw.StaticText.dll")
-			->SetProperty("debugid", "22")
-			->SetProperty("title", WideToNarrow(status).c_str())
-			->SetColor("StaticText:background-color", RGB(0 + (i * 25), 80, 120))
-			->SetColor("StaticText:foreground-color", RGB(40 - (i * 25), 70, 40 - (i * 25)));
-		bottomBar->AddWidget(widget);
+		card(g, 0, 1, "cw.GaugeEngineTemperatureControl")->AddWidget(WidgetFactory::Create("cw.GaugeEngineTemperatureControl.dll"))
+			->SetProperty("label", "Engine")->SetProperty("unit", "C")->SetProperty("min", "40")->SetProperty("max", "130")
+			->SetProperty("warning", "110")->SetProperty("value", "92");
+		card(g, 0, 2, "cw.GaugeBatteryLevelControl")->AddWidget(WidgetFactory::Create("cw.GaugeBatteryLevelControl.dll"))
+			->SetProperty("label", "Battery")->SetProperty("unit", "%")->SetProperty("value", "64")->SetProperty("lowWarning", "20");
+		card(g, 1, 0, "cw.AnalogClock")->AddWidget(WidgetFactory::Create("cw.AnalogClock.dll"))->SetProperty("show_seconds", "true");
+		card(g, 1, 1, "cw.ViewDateTimeWidget")->AddWidget(WidgetFactory::Create("cw.ViewDateTimeWidget.dll"));
+		static CpuMonitor cpu;
+		card(g, 1, 2, "cw.DataPlotControl, live CPU")->AddWidget(WidgetFactory::Create("cw.DataPlotControl.dll"))
+			->SetProperty("label_y", "CPU")->SetProperty("label_x", "last 60 s")->SetProperty("units", "%")
+			->SetProperty("min", "0")->SetProperty("max", "100")->SetProperty("steps", "60")
+			->AddTimer("cpu", 1000)->addEventHandler("cpu", [](IWidget* s, const char*) {
+				s->SetProperty("add_value", std::to_string(cpu.GetUsage()).c_str());
+			});
 	}
 
-	win->Maximize();
+	// --- 2. Progress & motion ---------------------------------------------------
+	{
+		ILayout* g = addPage("Progress & motion", L"soundbar", 2, 3);
+		auto pv = std::make_shared<int>(0);
+		ICell* pc = card(g, 0, 0, "cw.Progress"); pc->SetStackMode(StackMode::Vertical);
+		pc->AddWidget(WidgetFactory::Create("cw.Progress.dll"))
+			->SetProperty("show_text", "true")->SetProperty("value", "0")->SetProperty("height", "30")
+			->AddTimer("tick", 80)->addEventHandler("tick", [pv](IWidget* s, const char*) {
+				*pv = (*pv + 1) % 101; s->SetProperty("value", std::to_string(*pv).c_str());
+			});
+		ICell* ac = card(g, 0, 1, "cw.AnimatedParticlesProgress"); ac->SetStackMode(StackMode::Vertical);
+		ac->AddWidget(WidgetFactory::Create("cw.AnimatedParticlesProgress.dll"))
+			->SetProperty("title", "Working...")->SetProperty("height", "60")
+			->SetProperty("background-color", "#DBEAFE")->SetProperty("foreground-color", "#111827");
+		auto ev = std::make_shared<float>(0.0f);
+		card(g, 0, 2, "cw.EqualizerBar")->AddWidget(WidgetFactory::Create("cw.EqualizerBar.dll"))
+			->SetProperty("vertical", "false")->SetProperty("segments", "24")->SetProperty("value", "50")
+			->AddTimer("tick", 60)->addEventHandler("tick", [ev](IWidget* s, const char*) {
+				*ev += 0.21f;
+				s->SetProperty("value", std::to_string((int)(55.0f + 40.0f * std::sin(*ev) * std::sin(*ev * 0.37f))).c_str());
+			});
+		card(g, 1, 0, "cw.VitalsMonitor")->AddWidget(WidgetFactory::Create("cw.VitalsMonitor.dll"))
+			->SetProperty("label", "ECG")->SetProperty("mode", "sim")->SetProperty("active", "true");
+		ICell* tc = card(g, 1, 1, "cw.TextSlider"); tc->SetStackMode(StackMode::Vertical);
+		// These two read their colours through the CSS style chain, so they are
+		// set as string properties, not with SetColor().
+		tc->AddWidget(WidgetFactory::Create("cw.TextSlider.dll"))->SetProperty("height", "44")
+			->SetProperty("background-color", "#111827")->SetProperty("foreground-color", "#FFFFFF")->SetProperty("font-size", "14")
+			->SetProperty("text", "cw.TextSlider scrolls a line of text across its width, like a ticker on a news channel.")
+			->SetProperty("speed", "2");
+		card(g, 1, 2, "cw.EyesControl, follows the mouse")->AddWidget(WidgetFactory::Create("cw.EyesControl.dll"));
+	}
+
+	// --- 3. Inputs --------------------------------------------------------------
+	{
+		ILayout* g = addPage("Inputs", L"lightbulb", 2, 3);
+
+		ICell* bc = card(g, 0, 0, "cw.Button with CSS classes");
+		bc->SetStackMode(StackMode::Vertical); bc->SetProperty("gap", "4");
+		const char* kinds[3][2] = { { "Primary", "btn btn-primary" }, { "Success", "btn btn-success" }, { "Danger", "btn btn-danger" } };
+		for (auto& k : kinds) {
+			IWidget* b = WidgetFactory::Create("cw.Button.dll");
+			b->SetProperty("title", k[0])->SetProperty("height", "30");
+			StyleManager::AddClass(b, k[1]);
+			std::string label = k[0];
+			b->addEventHandler("onClick", [status, label](IWidget*, const char*) { *status = label + " button clicked."; });
+			bc->AddWidget(b);
+		}
+		bc->AddWidget(WidgetFactory::Create("cw.Button.dll"))
+			->SetProperty("title", "Pill with an icon and a badge")->SetProperty("is_pill", "true")->SetProperty("align", "left")
+			->SetProperty("badge_text", "3")->SetProperty("image_base64", icon(L"folder-open-outline").c_str())->SetProperty("height", "34")
+			->addEventHandler("onClick", [status](IWidget*, const char*) { *status = "Pill button clicked."; });
+
+		ICell* sc = card(g, 0, 1, "cw.SwitchButton");
+		sc->SetStackMode(StackMode::Vertical); sc->SetProperty("gap", "10");
+		sc->AddWidget(WidgetFactory::Create("cw.SwitchButton.dll"))->SetProperty("title", "Notifications")->Bind("checked", switchOn)->SetProperty("height", "36")
+			->addEventHandler("onChange", [status](IWidget*, const char* json) { *status = std::string("Notifications ") + (std::string(json) == "true" ? "on." : "off."); });
+		sc->AddWidget(WidgetFactory::Create("cw.SwitchButton.dll"))->SetProperty("title", "Waiting overlay on the image (Content page)")->Bind("checked", waiting)->SetProperty("height", "36")
+			->addEventHandler("onChange", [waiting](IWidget*, const char* json) { *waiting = std::string(json) == "true"; });
+
+		ICell* sl = card(g, 0, 2, "cw.SliderControl, bound to a label");
+		sl->SetStackMode(StackMode::Vertical); sl->SetProperty("gap", "10");
+		sl->AddWidget(WidgetFactory::Create("cw.SliderControl.dll"))->SetProperty("min", "0")->SetProperty("max", "100")->Bind("value", sliderValue)->SetProperty("height", "36")
+			->addEventHandler("onInput", [sliderText](IWidget* s, const char*) { *sliderText = std::string("Value: ") + s->GetProperty("value"); });
+		sl->AddWidget(text("Value: 50", 13, false, kInk))->Bind("title", sliderText)->SetProperty("height", "24");
+
+		ICell* ec = card(g, 1, 0, "cw.EditBox, validation, password");
+		ec->SetStackMode(StackMode::Vertical); ec->SetProperty("gap", "10");
+		ec->AddWidget(WidgetFactory::Create("cw.EditBox.dll"))->SetProperty("placeholder", "Type ok to pass validation")
+			->SetProperty("image_base64", icon(L"magnify").c_str())->SetProperty("height", "36")
+			->OnValidate([](IWidget* s, const char* v) {
+				if (std::string(v) == "ok") return true;
+				s->SetProperty("validation-error", "Value must be 'ok'"); return false;
+			});
+		ec->AddWidget(WidgetFactory::Create("cw.EditBox.dll"))->SetProperty("placeholder", "Password")->SetProperty("password", "true")->SetProperty("height", "36");
+
+		IWidget* list = WidgetFactory::Create("cw.ListCards.dll");
+		list->SetProperty("addImage", ("img_a|" + icon(L"spa-outline")).c_str());
+		list->SetProperty("addImage", ("img_b|" + icon(L"sticker-alert-outline")).c_str());
+		list->SetProperty("addItem", "a|Configuration|System preferences and defaults|img_a");
+		list->SetProperty("addItem", "b|Security patch|Available, restart required|img_b");
+		list->SetProperty("addItem", "c|Release notes|What changed in 2.1|img_a");
+		list->SetProperty("addItem", "d|A plain item|This one has no icon|");
+		list->SetProperty("addItem", "e|Backups|Last run tonight at 02:00|img_a");
+		list->addEventHandler("onItemClick", [status](IWidget*, const char* json) { *status = std::string("List item: ") + json; });
+		card(g, 1, 1, "cw.ListCards")->AddWidget(list);
+
+		ICell* st = card(g, 1, 2, "cw.StaticText");
+		st->SetStackMode(StackMode::Vertical); st->SetProperty("gap", "6");
+		st->AddWidget(text("A label: a title, a size, a style,", 13, false, kInk))->SetProperty("height", "30");
+		st->AddWidget(text("an alignment, CSS colours", 13, true, kInk))->SetProperty("height", "26");
+		st->AddWidget(text("or from SetColor().", 13, false, RGB(37, 99, 235)))->SetProperty("height", "26");
+	}
+
+	// --- 4. Content & overlays ----------------------------------------------------
+	{
+		ILayout* g = addPage("Content & overlays", L"image-album", 2, 3);
+		card(g, 0, 0, "cw.TitleDescCard")->AddWidget(WidgetFactory::Create("cw.TitleDescCard.dll"))
+			->SetProperty("title", "A card")->SetProperty("top_text", "CARD")
+			->SetProperty("description", "A heading, a small pill of text, a paragraph and an optional image.")
+			->SetProperty("image_base64", icon(L"spider-web").c_str());
+		card(g, 0, 1, "cw.ImageViewerWidget")->AddWidget(WidgetFactory::Create("cw.ImageViewerWidget.dll"))
+			->SetProperty("image-path", AssetPathA("images\\example1.jpg").c_str());
+		card(g, 0, 2, "cw.SnowingOverlay on a card")->AddWidget(WidgetFactory::Create("cw.TitleDescCard.dll"))
+			->SetProperty("title", "Snowing")->SetProperty("top_text", "OVERLAY")
+			->SetProperty("description", "Overlays are widgets stacked on another widget with AddOverlay().")
+			->AddOverlay(WidgetFactory::Create("cw.SnowingOverlay.dll")->SetProperty("active", "true")->SetProperty("freq", "60")->SetProperty("size", "3"));
+		card(g, 1, 0, "cw.LightingStormOverlay on a card")->AddWidget(WidgetFactory::Create("cw.TitleDescCard.dll"))
+			->SetProperty("title", "Lightning storm")->SetProperty("top_text", "OVERLAY")
+			->SetProperty("description", "Flashes and bolts over whatever sits underneath.")
+			->AddOverlay(WidgetFactory::Create("cw.LightingStormOverlay.dll")->SetProperty("active", "true")->SetProperty("intensity", "150"));
+		card(g, 1, 1, "cw.WaitingOverlay (switch on Inputs)")->AddWidget(WidgetFactory::Create("cw.ImageViewerWidget.dll"))
+			->SetProperty("image-path", AssetPathA("images\\example1.jpg").c_str())
+			->AddOverlay(WidgetFactory::Create("cw.WaitingOverlay.dll")->Bind("waiting", waiting));
+		card(g, 1, 2, "Two overlays on a clock")->AddWidget(WidgetFactory::Create("cw.AnalogClock.dll"))
+			->SetProperty("show_seconds", "true")
+			->AddOverlay(WidgetFactory::Create("cw.SnowingOverlay.dll")->SetProperty("active", "true")->SetProperty("freq", "40")->SetProperty("size", "2"))
+			->AddOverlay(WidgetFactory::Create("cw.LightingStormOverlay.dll")->SetProperty("active", "true")->SetProperty("intensity", "80"));
+	}
+
+	// --- 5. Dialogs -------------------------------------------------------------
+	{
+		ILayout* g = addPage("Dialogs", L"message-alert-outline", 1, 1);
+		ICell* d = card(g, 0, 0, "Dialogs are containers too: the same widgets, a modal loop");
+		d->SetStackMode(StackMode::Vertical); d->SetProperty("gap", "8");
+		d->AddWidget(text("Each button opens a second ChronoUI container with its own root layout and runs it modally.", 12, false, kMuted))->SetProperty("height", "22");
+		struct Dlg { const char* title; const wchar_t* icon; std::function<void()> run; };
+		std::vector<Dlg> dlgs = {
+			{ "Login dialog", L"incognito", [=] {
+				std::string u, p;
+				*status = ExampleLoginDlg(hwnd, u, p) ? "Logged in as " + u + "." : "Login cancelled.";
+			} },
+			{ "Create account", L"account-box-plus-outline", [=] {
+				std::string e, p;
+				*status = ExampleRegisterDlg(hwnd, e, p) ? "Account created for " + e + "." : "Registration cancelled.";
+			} },
+			{ "Message box: question", L"message-alert-outline", [=] {
+				int r = funMessageBox(hwnd, "Delete account?", "This cannot be undone.", CMB_YESNO | CMB_ICON_WARNING, &myVirtualDrive);
+				*status = r == IDYES ? "You chose Yes." : "You chose No.";
+			} },
+			{ "Message box: success", L"message-alert-outline", [=] {
+				funMessageBox(hwnd, "Saved", "Everything is in place.", CMB_OK | CMB_ICON_SUCCESS, &myVirtualDrive);
+			} },
+			{ "Message box: error", L"message-alert-outline", [=] {
+				funMessageBox(hwnd, "Connection failed", "Unable to reach the remote database.", CMB_OK | CMB_ICON_ERROR, &myVirtualDrive);
+			} },
+		};
+		for (auto& x : dlgs) {
+			auto run = x.run;
+			d->AddWidget(WidgetFactory::Create("cw.Button.dll"))
+				->SetProperty("title", x.title)->SetProperty("is_pill", "true")->SetProperty("align", "left")->SetProperty("arrow", "true")
+				->SetProperty("image_base64", icon(x.icon).c_str())->SetProperty("height", "40")->SetProperty("width", "320")
+				->addEventHandler("onClick", [run](IWidget*, const char*) { run(); });
+		}
+	}
+
+	// --- footer: the status line ------------------------------------------------
+	{
+		ICell* f = inset(root->GetCell(2, 0), "10");
+		f->SetStackMode(StackMode::Vertical);
+		f->AddWidget(text("", 12, false, kMuted))->Bind("title", status)->SetProperty("height", "20");
+	}
+
+	// "ChronoUIDemo 3" opens on page 3: lets a script capture every page.
+	int first = cmdLine && *cmdLine ? _wtoi(cmdLine) : 0;
+	if (first < 0 || first >= (int)nav.size()) first = 0;
+	nav[(size_t)first]->SetProperty("checked", "true");
+	pages->SetActiveTab(first);
+	win->Show();
 	win->RunMessageLoop();
-
 	delete win;
-
+	CoUninitialize();
 	return 0;
 }

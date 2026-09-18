@@ -154,24 +154,8 @@ add_executable(ChronoUIDemo WIN32
                 src/examples/main.cpp 
                 include/virtual_drive.hpp
 ) 
-# WidgetTesterDemo needs nlohmann/json (vcpkg install nlohmann-json). When the
-# package is missing we skip that one target instead of failing the configure:
-# the framework itself has no external dependencies and must always build.
-find_package(nlohmann_json QUIET)
-if(nlohmann_json_FOUND)
-    add_executable(WidgetTesterDemo WIN32
-                    src/examples/WidgetTesterDemo.cpp
-                    include/virtual_drive.hpp
-    )
-    target_link_libraries(WidgetTesterDemo PRIVATE nlohmann_json::nlohmann_json)
-else()
-    message(STATUS "Skipping WidgetTesterDemo (needs nlohmann-json — "
-                   "vcpkg install nlohmann-json:x64-windows).")
-endif()
-add_executable(LayoutTester WIN32 
-                src/examples/LayoutTester.cpp 
-                include/virtual_drive.hpp
-) 
+# The cw.* model's demos: ChronoUIDemo shows the 23 widgets one family per
+# page; HelloWorld and Welcome are the two smallest programs on that model.
 add_executable(HelloWorld WIN32
                 src/examples/HelloWorld.cpp
                 include/virtual_drive.hpp
@@ -195,10 +179,6 @@ endforeach()
 # the widget import libs, which additionally makes CMake build the widget DLLs
 # before the exe that loads them.
 target_link_libraries(ChronoUIDemo PRIVATE ChronoUI ${ALL_WIDGET_TARGETS})
-if(TARGET WidgetTesterDemo)
-    target_link_libraries(WidgetTesterDemo PRIVATE ChronoUI ${ALL_WIDGET_TARGETS})
-endif()
-target_link_libraries(LayoutTester   PRIVATE ChronoUI ${ALL_WIDGET_TARGETS})
 target_link_libraries(HelloWorld     PRIVATE ChronoUI ${ALL_WIDGET_TARGETS})
 target_link_libraries(Welcome        PRIVATE ChronoUI ${ALL_WIDGET_TARGETS})
 
@@ -211,6 +191,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/JLToys/CMakeLists.txt")
     add_subdirectory(JLToys)
 endif()
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ClaudeMM/CMakeLists.txt")
+    find_package(nlohmann_json QUIET)
     if(nlohmann_json_FOUND)
         add_subdirectory(ClaudeMM)
     else()
@@ -221,10 +202,6 @@ endif()
 
 
 set_target_properties(ChronoUIDemo PROPERTIES FOLDER "Examples")
-if(TARGET WidgetTesterDemo)
-    set_target_properties(WidgetTesterDemo PROPERTIES FOLDER "Examples")
-endif()
-set_target_properties(LayoutTester PROPERTIES FOLDER "Examples")
 set_target_properties(HelloWorld PROPERTIES FOLDER "Examples")
 set_target_properties(Welcome PROPERTIES FOLDER "Examples")
 
@@ -234,10 +211,7 @@ set_target_properties(Welcome PROPERTIES FOLDER "Examples")
 # current working directory at launch. Mirrors typical
 # game/native-app packaging.
 # ---------------------------------------------------------
-set(DEMO_TARGETS ChronoUIDemo LayoutTester HelloWorld Welcome VirtualHello)
-if(TARGET WidgetTesterDemo)
-    list(APPEND DEMO_TARGETS WidgetTesterDemo)
-endif()
+set(DEMO_TARGETS ChronoUIDemo HelloWorld Welcome VirtualHello)
 
 # One staging target, not one post-build per demo: every demo lands in the
 # same folder as ChronoUI.dll, and N parallel copies of the same tree into the
@@ -260,8 +234,7 @@ if(MSVC)
     # Every example is a GUI app and wants the Common-Controls v6 manifest so
     # the native dialogs pick up the modern theme. One loop instead of the
     # copy-pasted pair of blocks this used to be.
-    set(_chronoui_demos ChronoUIDemo LayoutTester HelloWorld Welcome
-                        WidgetTesterDemo ${CHRONOUI_VIRTUAL_EXAMPLES})
+    set(_chronoui_demos ChronoUIDemo HelloWorld Welcome ${CHRONOUI_VIRTUAL_EXAMPLES})
     set(_chronoui_manifest
         " /MANIFESTDEPENDENCY:\"type='win32' name='Microsoft.Windows.Common-Controls'"
         " version='6.0.0.0' processorArchitecture='*'"

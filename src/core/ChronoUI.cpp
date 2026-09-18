@@ -578,7 +578,7 @@ namespace ChronoUI {
 			return this; 
 		}
 		virtual COLORREF GetColor(const char* key, COLORREF defaultColor = RGB(0, 0, 0)) override { return ContextNodeImpl::GetColor(key, defaultColor); }
-		virtual IContextNode* SetColor(const char* key, COLORREF color) override { return SetColor(key, color); };
+		virtual IContextNode* SetColor(const char* key, COLORREF color) override { return ContextNodeImpl::SetColor(key, color); };
 		virtual const char* GetStyle(const char* _prop, const char* _def, const char* _classid, const char* _subclass, bool selected, bool enabled, bool hovered, bool active) override { return ContextNodeImpl::GetStyle(_prop, _def, _classid, _subclass, selected, enabled, hovered, active); }
 
 		void __stdcall SetRow(int i, WidgetSize s, bool sp, WidgetSize min) override {
@@ -870,7 +870,7 @@ namespace ChronoUI {
 			return this;
 		}
 		virtual COLORREF GetColor(const char* key, COLORREF defaultColor = RGB(0, 0, 0)) override { return ContextNodeImpl::GetColor(key, defaultColor); }
-		virtual IContextNode* SetColor(const char* key, COLORREF color) override { return SetColor(key, color); };
+		virtual IContextNode* SetColor(const char* key, COLORREF color) override { return ContextNodeImpl::SetColor(key, color); };
 		virtual const char* GetStyle(const char* _prop, const char* _def, const char* _classid, const char* _subclass, bool selected, bool enabled, bool hovered, bool active) override { return ContextNodeImpl::GetStyle(_prop, _def, _classid, _subclass, selected, enabled, hovered, active); }
 
 		~ContainerImpl() {

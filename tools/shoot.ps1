@@ -43,6 +43,8 @@
       @{ close = $true }            close the window early (WM_CLOSE)
       @{ record = 'x.gif'; fps = 12; width = 800 }   start recording frames
       @{ stop = $true }             stop and assemble the GIF (tools/gif.py)
+.PARAMETER ExeArgs
+    Command line passed to the executable (an example can open on a given page).
 .PARAMETER Keep
     Leave the app running after the final capture.
 
@@ -67,6 +69,7 @@ param(
     [object[]]$Steps = @(),
     [string]$Args = '',
     [string]$Title = '',
+    [string]$ExeArgs = '',        # command line handed to the exe (e.g. a start page)
     [switch]$Keep
 )
 
@@ -160,8 +163,8 @@ $saved = @{}
 foreach ($k in $Env.Keys) { $saved[$k] = [Environment]::GetEnvironmentVariable($k); [Environment]::SetEnvironmentVariable($k, [string]$Env[$k]) }
 try {
     $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.Arguments = $ExeArgs
     $psi.FileName = $exePath
-    $psi.Arguments = $Args
     $psi.WorkingDirectory = Split-Path $exePath
     $psi.UseShellExecute = $false
     $proc = [System.Diagnostics.Process]::Start($psi)

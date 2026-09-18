@@ -1,6 +1,7 @@
 ﻿#include <d2d1.h>
 #include <dwrite.h>
 #include <string>
+#include <cmath>
 #include <algorithm>
 #include <vector>
 #include <fstream>
@@ -206,10 +207,11 @@ public:
 	void OnDrawWidget(ID2D1RenderTarget* pRT) override {
 		if (!pRT) return;
 
-		// 1. Get Geometry
-		RECT rc;
-		GetClientRect(m_hwnd, &rc);
-		D2D1_RECT_F rect = D2D1::RectF((float)rc.left, (float)rc.top, (float)rc.right, (float)rc.bottom);
+		// 1. Get Geometry. The render target is set to the window's DPI, so it
+		// draws in DIPs: the client rect in pixels would land the text 1.5x too
+		// low on a 150 % monitor, outside the widget.
+		D2D1_SIZE_F size = pRT->GetSize();
+		D2D1_RECT_F rect = D2D1::RectF(0.0f, 0.0f, size.width, size.height);
 		float width = rect.right - rect.left;
 		float height = rect.bottom - rect.top;
 
@@ -231,7 +233,7 @@ public:
 			// Add 50% screen width gap for loop
 			float loopGap = width * 0.5f;
 
-			DWRITE_TEXT_METRICS textMetrics;
+			DWRITE_TEXT_METRICS textMetrics = {};
 			if (m_pTextLayout) {
 				m_pTextLayout->GetMetrics(&textMetrics);
 			}
@@ -321,12 +323,16 @@ public:
 	// Heartbeat-driven scrolling text. m_speed is per legacy 16ms tick — scale
 	// by real frame time so the scroll feels the same independent of frame rate.
 	bool OnUpdateAnimation(float deltaTime) override {
+		// Nothing to scroll until the first paint has measured the text; ticking
+		// before that drove m_scrollPos off to the left with no width to wrap
+		// by, and the text never came back.
+		if (m_contentWidth <= 0.0f) return false;
 		m_scrollPos -= m_speed * (deltaTime * 60.0f);
 
 		// Loop reset: once the first instance has scrolled fully off the left,
 		// jump back by one content width for a seamless wrap.
 		if (m_scrollPos <= -m_contentWidth) {
-			m_scrollPos += m_contentWidth;
+			m_scrollPos = fmodf(m_scrollPos, m_contentWidth);
 			FireEvent("onCycleComplete", "{}");
 		}
 		return true;
