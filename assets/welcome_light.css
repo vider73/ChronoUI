@@ -1,0 +1,49 @@
+/* =============================================================================
+ * Welcome demo — light theme overlay
+ * Loaded on top of bootstrap_lite.css. Demonstrates the modernized parser:
+ *   - rgb() color values
+ *   - margin shorthand (expands to margin-top/-right/-bottom/-left)
+ *   - named colors
+ *   - order-preserving class cascade (btn applied first, btn-* second)
+ * ========================================================================== */
+
+.btn {
+    margin: 4px 8px;          /* shorthand: 4px vertical, 8px horizontal */
+    padding: 6px;             /* parsed but currently inert (kept for completeness) */
+    border-radius: 4px;
+    border-width: 1px;
+    font-size: 11px;
+}
+
+.btn-primary {
+    background-color: rgb(74, 144, 226);
+    border-color:     rgb(74, 144, 226);
+    color: white;
+}
+.btn-primary:hover {
+    background-color: rgb(59, 122, 200);
+    border-color:     rgb(59, 122, 200);
+    color: white;
+}
+
+.btn-success {
+    background-color: rgb(95, 179, 96);
+    border-color:     rgb(95, 179, 96);
+    color: white;
+}
+.btn-success:hover {
+    background-color: rgb(76, 153, 78);
+    border-color:     rgb(76, 153, 78);
+    color: white;
+}
+
+.btn-danger {
+    background-color: rgb(232, 92, 92);
+    border-color:     rgb(232, 92, 92);
+    color: white;
+}
+.btn-danger:hover {
+    background-color: rgb(210, 70, 70);
+    border-color:     rgb(210, 70, 70);
+    color: white;
+}

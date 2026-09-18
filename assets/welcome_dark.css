@@ -1,0 +1,49 @@
+/* =============================================================================
+ * Welcome demo — dark theme overlay
+ * Loaded on top of bootstrap_lite.css when the user clicks the Theme button.
+ * Showcases:
+ *   - Named colors (white, black)
+ *   - rgb() with explicit values
+ *   - Both font-weight keyword + numeric paths in DrawTextStyled
+ * ========================================================================== */
+
+.btn {
+    margin: 4px 8px;
+    padding: 6px;
+    border-radius: 4px;
+    border-width: 1px;
+    font-size: 11px;
+}
+
+.btn-primary {
+    background-color: rgb(100, 181, 246);
+    border-color:     rgb(100, 181, 246);
+    color: black;
+}
+.btn-primary:hover {
+    background-color: rgb(144, 202, 249);
+    border-color:     rgb(144, 202, 249);
+    color: black;
+}
+
+.btn-success {
+    background-color: rgb(102, 187, 106);
+    border-color:     rgb(102, 187, 106);
+    color: black;
+}
+.btn-success:hover {
+    background-color: rgb(129, 199, 132);
+    border-color:     rgb(129, 199, 132);
+    color: black;
+}
+
+.btn-danger {
+    background-color: rgb(239, 83, 80);
+    border-color:     rgb(239, 83, 80);
+    color: white;
+}
+.btn-danger:hover {
+    background-color: rgb(229, 115, 115);
+    border-color:     rgb(229, 115, 115);
+    color: white;
+}
