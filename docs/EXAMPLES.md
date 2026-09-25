@@ -109,6 +109,10 @@ card tilts and casts a stronger shadow.
   that looks the same at any frame rate.
 - The ghost is drawn last, under a 2.5° `SetTransform` rotation around its
   centre, so it floats above the board.
+- Each column scrolls on its own once its cards outgrow it: the wheel over a
+  column moves that column, a thin thumb shows where you are, cards are
+  clipped under the header, and a card held near the top or bottom edge
+  scrolls the column by itself from `OnUpdate`. Adding a card scrolls to it.
 
 **Try asking your model:** *"Let me double-click a card to rename it inline
 using VChatInput."* Or: *"Add a fourth column, and let columns themselves be

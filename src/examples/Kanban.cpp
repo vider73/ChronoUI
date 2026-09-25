@@ -40,6 +40,7 @@ struct Card {
 struct Column {
 	std::wstring name;
 	std::vector<Card> cards;
+	float scroll = 0.0f;           // how far this column is scrolled; each scrolls on its own
 };
 
 static D2D1_COLOR_F TagColor(const std::wstring& tag) {
@@ -74,7 +75,22 @@ class VBoard : public VirtualWidgetImpl {
 		D2D1_RECT_F col = ColRect(c);
 		return D2D1::RectF(col.left + 10.0f, y, col.right - 10.0f, y + kCardH);
 	}
-	float SlotY(int c, int slot) const { return ColRect(c).top + kHead + (float)slot * (kCardH + kGap); }
+	float SlotY(int c, int slot) const { return ColRect(c).top + kHead + (float)slot * (kCardH + kGap) - m_cols[(size_t)c].scroll; }
+
+	// Scrolling: a column taller than its cards does not scroll at all; a full
+	// one scrolls until the last card sits on its bottom edge. The wheel over
+	// a column moves that column, a drag held near an edge moves it by itself.
+	float MaxScroll(int c) const {
+		float content = kHead + (float)m_cols[(size_t)c].cards.size() * (kCardH + kGap) + 4.0f;
+		return (std::max)(0.0f, content - vd::H(ColRect(c)));
+	}
+	void ScrollBy(int c, float dy) {
+		Column& col = m_cols[(size_t)c];
+		float v = vd::Clamp(col.scroll + dy, 0.0f, MaxScroll(c));
+		if (v == col.scroll) return;
+		col.scroll = v; Relayout(true);
+	}
+	void ClampScrolls() { for (int c = 0; c < (int)m_cols.size(); ++c) m_cols[(size_t)c].scroll = vd::Clamp(m_cols[(size_t)c].scroll, 0.0f, MaxScroll(c)); }
 
 	// Every card gets a target slot; in the column under a drag, cards at or
 	// after the insertion point shift one slot down to open a gap.
@@ -90,9 +106,11 @@ class VBoard : public VirtualWidgetImpl {
 		}
 	}
 	bool HitCard(float x, float y, int& col, int& idx) const {
-		for (int c = 0; c < (int)m_cols.size(); ++c)
+		for (int c = 0; c < (int)m_cols.size(); ++c) {
+			if (y < ColRect(c).top + kHead) continue;          // scrolled under the header: not there
 			for (size_t i = 0; i < m_cols[c].cards.size(); ++i)
 				if (vd::Contains(CardRect(c, m_cols[c].cards[i].y), x, y)) { col = c; idx = (int)i; return true; }
+		}
 		return false;
 	}
 	int ColumnAt(float x) const {
@@ -124,7 +142,7 @@ class VBoard : public VirtualWidgetImpl {
 public:
 	const char* GetTypeName() const override { return "VBoard"; }
 
-	void SetBounds(const D2D1_RECT_F& r) override { VirtualWidgetImpl::SetBounds(r); Relayout(true); }
+	void SetBounds(const D2D1_RECT_F& r) override { VirtualWidgetImpl::SetBounds(r); ClampScrolls(); Relayout(true); }
 
 	void Reset() {
 		m_cols = {
@@ -149,12 +167,19 @@ public:
 		k.y = SlotY(0, (int)m_cols[0].cards.size()) - 24.0f;   // drop in from above
 		k.placed = true;
 		m_cols[0].cards.push_back(k);
+		m_cols[0].scroll = MaxScroll(0);                         // the new card ends up in view
 		Relayout();
 	}
 	int CardCount() const { int n = 0; for (auto& c : m_cols) n += (int)c.cards.size(); return n; }
 
 	bool OnUpdate(float dt) override {
 		bool moving = false;
+		// A card held near a column's edge scrolls that column while it stays there.
+		if (m_dragging && m_overCol >= 0) {
+			D2D1_RECT_F col = ColRect(m_overCol);
+			if (m_my > col.bottom - 40.0f)           ScrollBy(m_overCol, 360.0f * dt);
+			else if (m_my < col.top + kHead + 24.0f) ScrollBy(m_overCol, -360.0f * dt);
+		}
 		for (auto& col : m_cols)
 			for (Card& k : col.cards) {
 				if (fabsf(k.y - k.targetY) < 0.3f) { k.y = k.targetY; continue; }
@@ -198,6 +223,12 @@ public:
 		return VInputResult::Handled;
 	}
 	VInputResult OnMouseLeave() override { m_hoverCol = m_hoverIdx = -1; return VInputResult::Handled; }
+	VInputResult OnMouseWheel(float delta, float x, float) override {
+		int c = ColumnAt(x);
+		if (MaxScroll(c) <= 0.0f) return VInputResult::NotHandled;
+		ScrollBy(c, -(delta / 120.0f) * (kCardH + kGap));
+		return VInputResult::Handled;
+	}
 
 	void OnDraw(ID2D1RenderTarget* rt) override {
 		for (int c = 0; c < (int)m_cols.size(); ++c) {
@@ -209,6 +240,9 @@ public:
 			vd::Fill(rt, pill, vd::Col(0xD1D5DB), 10.0f);
 			vd::Text(rt, n, pill, kMuted, vd::Style().Size(11).Bold().Center());
 
+			// Cards are clipped to the column below its header, so a scrolled
+			// column never spills over its rounded foot or under its title.
+			rt->PushAxisAlignedClip(D2D1::RectF(col.left, col.top + kHead - 6.0f, col.right, col.bottom), D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
 			if (m_dragging && c == m_overCol) {
 				D2D1_RECT_F gap = CardRect(c, SlotY(c, m_insert));
 				vd::Fill(rt, gap, vd::Alpha(kAccent, 0.08f), 10.0f);
@@ -220,6 +254,13 @@ public:
 				D2D1_RECT_F r = CardRect(c, k.y);
 				if (hov) r = vd::Inset(r, -2.0f, -2.0f);
 				DrawCard(rt, r, k, hov);
+			}
+			rt->PopAxisAlignedClip();
+			float ms = MaxScroll(c);
+			if (ms > 0.0f) {
+				float H = vd::H(col) - kHead - 8.0f, th = (std::max)(24.0f, H * vd::H(col) / (vd::H(col) + ms));
+				float ty = col.top + kHead + (H - th) * (m_cols[c].scroll / ms);
+				vd::Fill(rt, vd::Rect(col.right - 7.0f, ty, 3.0f, th), vd::Col(0x000000, 0.22f), 1.5f);
 			}
 		}
 		if (m_dragging) {
