@@ -61,6 +61,15 @@ and how it works), `docs/WIDGETS.md` (every widget in both models),
   Assets glyphs).
 - `VirtualChat.hpp` — bubbles, code blocks and the text editor `VChatInput`.
 
+## Theme
+
+`VTheme` (VirtualWidget.hpp) is the palette; widgets read it at draw time via
+`vtheme::Current()` and the `vctl::` shorthands in VControls.hpp. Never write
+a literal grey or white in a widget: `vctl::Surface()`, `Border()`,
+`Outline()`, `Subtle()`, `Dim()`, `Hover(alpha)` are what a card, a hairline,
+a field edge, a hover wash are called, and they flip with `vtheme::SetDark`.
+White text on the accent, scrims and shadows stay literal on purpose.
+
 ## Conventions
 
 - **Simplicity and cleanliness.** If something is not used, it goes. If a block

@@ -30,14 +30,11 @@
 
 using namespace ChronoUI;
 
-static const D2D1_COLOR_F kBg    = vd::Col(0xF3F3F3);
-static const D2D1_COLOR_F kText  = vd::Col(0x111827);
-static const D2D1_COLOR_F kMuted = vd::Col(0x6B7280);
 
 class VCard : public VirtualWidgetImpl {
 public:
 	const char* GetTypeName() const override { return "VCard"; }
-	void OnDraw(ID2D1RenderTarget* rt) override { vd::Fill(rt, m_bounds, vd::Col(0xFFFFFF), 8.0f); vd::Stroke(rt, m_bounds, vd::Col(0xE5E7EB), 8.0f, 1.0f); }
+	void OnDraw(ID2D1RenderTarget* rt) override { vd::Fill(rt, m_bounds, vctl::Surface(), 8.0f); vd::Stroke(rt, m_bounds, vctl::Border(), 8.0f, 1.0f); }
 };
 
 struct Cell { VLabel* caption; std::vector<IVirtualWidget*> widgets; float h; bool wide; };
@@ -54,12 +51,18 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR cmdLine, int) {
 
 	VirtualWindow win;
 	if (!win.Create(hInstance, L"ChronoUI \x2014 Catalog", 1280, 860)) return 1;
-	win.SetBackground(kBg);
+	// "dark" on the command line starts in the dark theme; the toggle at the top right switches live.
+	vtheme::SetDark(cmdLine && wcsstr(cmdLine, L"dark") != nullptr);
+	win.SetBackground(vtheme::Current().window);
 	HWND hwnd = win.GetHWND();
 	auto repaint = [hwnd] { InvalidateRect(hwnd, NULL, FALSE); };
-	auto label = [&](const std::wstring& text, float size = 13.0f, D2D1_COLOR_F col = kText) {
-		VLabel* l = win.Add<VLabel>(); l->Text(text).FontSize(size).Color(col); return l;
+	// Labels take their colour from the theme at draw time (ink, or muted), so they follow the toggle.
+	auto label = [&](const std::wstring& text, float size = 13.0f, bool muted = false) {
+		VLabel* l = win.Add<VLabel>(); l->Text(text).FontSize(size).Muted(muted); return l;
 	};
+	auto* darkLbl = win.AddChrome<VLabel>(); darkLbl->Text(L"Dark").FontSize(12.0f).Muted(true);
+	auto* dark = win.AddChrome<VToggle>(); dark->Set(vtheme::IsDark());
+	dark->OnChange([&](bool on) { vtheme::SetDark(on); win.SetBackground(vtheme::Current().window); repaint(); });
 
 	auto* nav = win.Add<VNavView>(
 		std::vector<VNavView::Item>{ { L"\xE8FD", L"Basics" }, { L"\xE70F", L"Input" }, { L"\xE946", L"Status" }, { L"\xE8A5", L"Navigation" },
@@ -67,7 +70,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR cmdLine, int) {
 		std::vector<VNavView::Item>{ { L"\xE946", L"About" } });
 	nav->Badge(2, 3);
 	auto* title  = label(L"", 26.0f);
-	auto* status = label(L"Click anything; this line says what happened.", 12.0f, kMuted);
+	auto* status = label(L"Click anything; this line says what happened.", 12.0f, true);
 	std::vector<Page> pages(8);
 	pages[0].title = L"Basics"; pages[1].title = L"Input"; pages[2].title = L"Status"; pages[3].title = L"Navigation";
 	pages[4].title = L"Collections"; pages[5].title = L"Text & media"; pages[6].title = L"Layout"; pages[7].title = L"About";
@@ -76,14 +79,14 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR cmdLine, int) {
 
 	// cell(page, caption, height, widgets...) — the caption label is created here.
 	auto cell = [&](int page, const std::wstring& caption, float h, std::vector<IVirtualWidget*> ws, bool wide = false) {
-		pages[(size_t)page].cells.push_back({ label(caption, 12.0f, kMuted), std::move(ws), h, wide });
+		pages[(size_t)page].cells.push_back({ label(caption, 12.0f, true), std::move(ws), h, wide });
 	};
 
 	// --- Basics -------------------------------------------------------------
 	auto* lbl = label(L"VLabel \x2014 one line of text, a size, a colour.", 14.0f);
 	cell(0, L"VLabel", 24.0f, { lbl });
 	auto* btn = win.Add<VButton>(); btn->Text(L"VButton");
-	auto* btn2 = win.Add<VButton>(); btn2->Text(L"Secondary").Face(vd::Col(0xE9E9E9)).FaceHover(vd::Col(0xDCDCDC)).FacePress(vd::Col(0xCFCFCF)).TextColor(kText);
+	auto* btn2 = win.Add<VButton>(); btn2->Text(L"Secondary").Face(vctl::Track()).FaceHover(vctl::Outline()).FacePress(vctl::Dim()).TextColor(vctl::Ink());
 	auto* btn3 = win.Add<VButton>(); btn3->Text(L"Disabled").Enabled(false);
 	btn->OnClick([&] { say(L"VButton clicked."); }); btn2->OnClick([&] { say(L"Secondary clicked."); });
 	cell(0, L"VButton \x00B7 secondary \x00B7 disabled", 36.0f, { btn, btn2, btn3 });
@@ -283,15 +286,15 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR cmdLine, int) {
 	auto* scroll = win.Add<VScrollViewer>(); scroll->Content(900.0f, 700.0f);
 	scroll->Paint([](ID2D1RenderTarget* rt, const D2D1_RECT_F&) {
 		for (int y = 0; y < 7; ++y) for (int x = 0; x < 9; ++x)
-			vd::Fill(rt, vd::Rect((float)x * 100.0f, (float)y * 100.0f, 100.0f, 100.0f), ((x + y) & 1) ? vd::Col(0xF3F4F6) : vd::Col(0xE0E7FF));
-		vd::Text(rt, L"900 \x00D7 700 of content. Wheel scrolls, Shift+wheel sideways, Ctrl+wheel zooms about the cursor, drag pans.", vd::Rect(20.0f, 16.0f, 860.0f, 40.0f), kText, vd::Style().Size(16).Bold());
+			vd::Fill(rt, vd::Rect((float)x * 100.0f, (float)y * 100.0f, 100.0f, 100.0f), ((x + y) & 1) ? vctl::Subtle() : vd::Alpha(vctl::Blue(), 0.18f));
+		vd::Text(rt, L"900 \x00D7 700 of content. Wheel scrolls, Shift+wheel sideways, Ctrl+wheel zooms about the cursor, drag pans.", vd::Rect(20.0f, 16.0f, 860.0f, 40.0f), vctl::Ink(), vd::Style().Size(16).Bold());
 		for (int k = 0; k < 6; ++k) vd::Circle(rt, 150.0f + (float)k * 120.0f, 400.0f, 40.0f, vd::FromHSV((float)k * 60.0f, 0.6f, 0.9f));
 	});
 	cell(6, L"VScrollViewer (900 \x00D7 700 of painted content)", 180.0f, { scroll }, true);
 	auto* splitCard = win.Add<VCard>();
 	auto* splitv = win.Add<VSplitView>(); splitv->PaneWidth(200.0f);
 	auto* paneLbl = label(L"The pane", 13.0f);
-	auto* contentLbl = label(L"The content. PaneRect() and ContentRect() place the children.", 13.0f, kMuted);
+	auto* contentLbl = label(L"The content. PaneRect() and ContentRect() place the children.", 13.0f, true);
 	auto* splitBtn = win.Add<VButton>(); splitBtn->Text(L"Toggle pane");
 	splitBtn->OnClick([&] { splitv->Toggle(); say(splitv->IsOpen() ? L"Pane opening." : L"Pane closing."); });
 	auto* splitMode = win.Add<VSegment>(std::vector<std::wstring>{ L"Inline", L"Overlay", L"Compact inline", L"Compact overlay" });
@@ -310,8 +313,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR cmdLine, int) {
 	// --- About ----------------------------------------------------------------
 	auto* aboutCard = win.Add<VCard>();
 	auto* a1 = label(L"Every virtual widget in the framework, one page per family.", 14.0f);
-	auto* a2 = label(L"Headers: VirtualWidget, VirtualChat, VControls, VNavigation, VCollections, VActions, VIndicators, VText, VMedia, VLayout, VDraw.", 13.0f, kMuted);
-	auto* a3 = label(L"Open this after changing a header: if it looks right here, it looks right everywhere.", 13.0f, kMuted);
+	auto* a2 = label(L"Headers: VirtualWidget, VirtualChat, VControls, VNavigation, VCollections, VActions, VIndicators, VText, VMedia, VLayout, VDraw.", 13.0f, true);
+	auto* a3 = label(L"Open this after changing a header: if it looks right here, it looks right everywhere.", 13.0f, true);
 	cell(7, L"", 110.0f, { aboutCard, a1, a2, a3 }, true);
 
 	// --- pages + layout ---------------------------------------------------------
@@ -331,6 +334,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR cmdLine, int) {
 		nav->SetBounds(vd::Rect(0.0f, 0.0f, navW, H));
 		float x = navW + 36.0f, w = W - x - 36.0f, colW = (w - 24.0f) * 0.5f;
 		title ->SetBounds(vd::Rect(x, 22.0f, w, 36.0f));
+		darkLbl->SetBounds(vd::Rect(W - 116.0f, 24.0f, 40.0f, 24.0f)); dark->SetBounds(vd::Rect(W - 76.0f, 24.0f, 50.0f, 24.0f));
 		status->SetBounds(vd::Rect(x, H - 30.0f, w, 20.0f));
 		for (VFlyout* f : flyouts) f->Cover(W, H);
 		dialog->Cover(W, H);

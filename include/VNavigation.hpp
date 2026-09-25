@@ -123,14 +123,14 @@ namespace ChronoUI {
 		}
 		void OnDraw(ID2D1RenderTarget* rt) override {
 			D2D1_RECT_F b = Burger();
-			if (m_hover == -2) vd::Fill(rt, b, vd::Col(0x000000, 0.06f), 6.0f);
+			if (m_hover == -2) vd::Fill(rt, b, vctl::Hover(0.06f), 6.0f);
 			for (int k = -1; k <= 1; ++k)
 				vd::Line(rt, vd::CX(b) - 8.0f, vd::CY(b) + 5.0f * (float)k, vd::CX(b) + 8.0f, vd::CY(b) + 5.0f * (float)k, vctl::Ink(), 1.5f);
 			float labelA = vd::Clamp01((m_w - kCompact - 40.0f) / (kOpen - kCompact - 40.0f));
 			for (int i = 0; i < Count(); ++i) {
 				D2D1_RECT_F r = RowRect(i);
 				bool on = i == m_sel;
-				if (on || i == m_hover) vd::Fill(rt, r, vd::Col(0x000000, on ? 0.07f : 0.045f), 6.0f);
+				if (on || i == m_hover) vd::Fill(rt, r, vctl::Hover(on ? 0.07f : 0.045f), 6.0f);
 				if (on && m_focused) vd::Stroke(rt, r, vd::Alpha(m_accent, 0.5f), 6.0f, 1.0f);
 				const Item& it = At(i);
 				vd::Text(rt, it.glyph, vd::Rect(r.left, r.top, 40.0f, kRowH), vctl::Ink(), vd::Style().Icon().Size(16).Center());
@@ -224,8 +224,8 @@ namespace ChronoUI {
 		void OnDraw(ID2D1RenderTarget* rt) override {
 			D2D1_RECT_F selR = TabRect(m_sel);
 			float yb = m_bounds.bottom - 0.5f;
-			vd::Line(rt, m_bounds.left, yb, selR.left, yb, vd::Col(0xE5E7EB), 1.0f);
-			vd::Line(rt, selR.right, yb, m_bounds.right, yb, vd::Col(0xE5E7EB), 1.0f);
+			vd::Line(rt, m_bounds.left, yb, selR.left, yb, vctl::Border(), 1.0f);
+			vd::Line(rt, selR.right, yb, m_bounds.right, yb, vctl::Border(), 1.0f);
 			for (int i = 0; i < Count(); ++i) {
 				D2D1_RECT_F r = TabRect(i);
 				bool on = i == m_sel;
@@ -233,24 +233,24 @@ namespace ChronoUI {
 					// Rounded top corners; the bottom edge runs 10 px below the
 					// strip, where the content card painted after us covers it.
 					D2D1_RECT_F card = D2D1::RectF(r.left, r.top + 4.0f, r.right, r.bottom + 10.0f);
-					vd::Fill(rt, card, vd::Col(0xFFFFFF), 8.0f);
-					vd::Stroke(rt, card, vd::Col(0xE5E7EB), 8.0f, 1.0f);
+					vd::Fill(rt, card, vctl::Surface(), 8.0f);
+					vd::Stroke(rt, card, vctl::Border(), 8.0f, 1.0f);
 					if (m_focused) vd::Stroke(rt, vd::Inset(card, 3.0f, 3.0f), vd::Alpha(m_accent, 0.5f), 6.0f, 1.0f);
 				} else if (i == m_hover) {
-					vd::Fill(rt, vd::Inset(r, 3.0f, 6.0f), vd::Col(0x000000, 0.04f), 6.0f);
+					vd::Fill(rt, vd::Inset(r, 3.0f, 6.0f), vctl::Hover(0.04f), 6.0f);
 				}
 				float textR = m_closable ? r.right - 34.0f : r.right - 12.0f;
 				vd::Text(rt, m_tabs[(size_t)i], D2D1::RectF(r.left + 14.0f, r.top + 2.0f, textR, r.bottom),
 					on ? vctl::Ink() : vctl::Muted(), on ? vd::Style().Size(13).Bold() : vd::Style().Size(13));
 				if (m_closable) {
 					D2D1_RECT_F c = CloseRect(i);
-					if (i == m_hover && m_hoverClose) vd::Fill(rt, c, vd::Col(0x000000, 0.08f), 4.0f);
+					if (i == m_hover && m_hoverClose) vd::Fill(rt, c, vctl::Hover(0.08f), 4.0f);
 					vd::Text(rt, L"\xE711", c, on || i == m_hover ? vctl::Ink() : vctl::Muted(), vd::Style().Icon().Size(9).Center());
 				}
 			}
 			if (m_addable) {
 				D2D1_RECT_F a = AddRect();
-				if (m_hoverAdd) vd::Fill(rt, a, vd::Col(0x000000, 0.06f), 6.0f);
+				if (m_hoverAdd) vd::Fill(rt, a, vctl::Hover(0.06f), 6.0f);
 				vd::Text(rt, L"\xE710", a, vctl::Ink(), vd::Style().Icon().Size(11).Center());
 			}
 		}
@@ -302,10 +302,10 @@ namespace ChronoUI {
 			Toggle(); return VInputResult::Handled;
 		}
 		void OnDraw(ID2D1RenderTarget* rt) override {
-			vd::Fill(rt, m_bounds, vd::Col(0xFFFFFF), 8.0f);
-			vd::Stroke(rt, m_bounds, m_focused ? vd::Alpha(m_accent, 0.6f) : vd::Col(0xE5E7EB), 8.0f, 1.0f);
+			vd::Fill(rt, m_bounds, vctl::Surface(), 8.0f);
+			vd::Stroke(rt, m_bounds, m_focused ? vd::Alpha(m_accent, 0.6f) : vctl::Border(), 8.0f, 1.0f);
 			D2D1_RECT_F head = vd::Rect(m_bounds.left, m_bounds.top, vd::W(m_bounds), kHeader);
-			if (m_hovered) vd::Fill(rt, vd::Inset(head, 1.0f, 1.0f), vd::Col(0x000000, 0.025f), 8.0f);
+			if (m_hovered) vd::Fill(rt, vd::Inset(head, 1.0f, 1.0f), vctl::Hover(0.025f), 8.0f);
 			float gx = m_bounds.left + 36.0f, gy = m_bounds.top + kHeader * 0.5f;
 			vd::Circle(rt, gx, gy, 18.0f, vd::Alpha(m_accent, 0.12f));
 			vd::Text(rt, m_glyph, vd::Rect(gx - 18.0f, gy - 18.0f, 36.0f, 36.0f), m_accent, vd::Style().Icon().Size(16).Center());
@@ -318,7 +318,7 @@ namespace ChronoUI {
 			}
 			vd::Chevron(rt, m_bounds.right - 28.0f, gy, 180.0f * m_anim, vctl::Muted());
 			if (m_anim > 0.02f)
-				vd::Line(rt, m_bounds.left + 16.0f, head.bottom - 0.5f, m_bounds.right - 16.0f, head.bottom - 0.5f, vd::Col(0xE5E7EB, m_anim), 1.0f);
+				vd::Line(rt, m_bounds.left + 16.0f, head.bottom - 0.5f, m_bounds.right - 16.0f, head.bottom - 0.5f, vd::Alpha(vctl::Border(), m_anim), 1.0f);
 		}
 	};
 
@@ -335,6 +335,7 @@ namespace ChronoUI {
 		static constexpr float kH = 56.0f;
 
 		D2D1_COLOR_F Tint() const {
+			if (vtheme::IsDark()) return vd::Mix(vctl::Surface(), Ink(), 0.16f);       // the severity colour, faintly, on the dark surface
 			switch (m_sev) { case VSeverity::Success: return vd::Col(0xECFDF3); case VSeverity::Warning: return vd::Col(0xFFF7E6);
 			                 case VSeverity::Error:   return vd::Col(0xFEF2F2); default:                 return vd::Col(0xEFF6FF); }
 		}
@@ -405,7 +406,7 @@ namespace ChronoUI {
 				vd::Text(rt, m_action, a, Ink(), vd::Style().Size(13).Bold().Center());
 			}
 			D2D1_RECT_F c = CloseRect();
-			if (m_hover == 1) vd::Fill(rt, c, vd::Col(0x000000, 0.07f), 4.0f);
+			if (m_hover == 1) vd::Fill(rt, c, vctl::Hover(0.07f), 4.0f);
 			vd::Text(rt, L"\xE711", c, vctl::Muted(), vd::Style().Icon().Size(10).Center());
 			rt->PopAxisAlignedClip();
 		}
@@ -456,9 +457,9 @@ namespace ChronoUI {
 			for (int i = first; i < (int)items.size(); ++i) {
 				const VMenuItem& it = items[(size_t)i];
 				D2D1_RECT_F r = RowRect(p, items, first, i);
-				if (it.separator) { vd::Line(rt, r.left + 8.0f, vd::CY(r), r.right - 8.0f, vd::CY(r), vd::Col(0xE5E7EB), 1.0f); continue; }
-				if (i == hover) vd::Fill(rt, r, vd::Col(0x000000, 0.05f), 6.0f);
-				D2D1_COLOR_F ink = it.enabled ? vctl::Ink() : vd::Col(0x9CA3AF);
+				if (it.separator) { vd::Line(rt, r.left + 8.0f, vd::CY(r), r.right - 8.0f, vd::CY(r), vctl::Border(), 1.0f); continue; }
+				if (i == hover) vd::Fill(rt, r, vctl::Hover(0.05f), 6.0f);
+				D2D1_COLOR_F ink = it.enabled ? vctl::Ink() : vctl::Dim();
 				const std::wstring g = it.checkable ? (it.checked ? std::wstring(L"\xE73E") : std::wstring()) : it.glyph;
 				vd::Text(rt, g, vd::Rect(r.left, r.top, 36.0f, kRow), ink, vd::Style().Icon().Size(13).Center());
 				vd::Text(rt, it.label, D2D1::RectF(r.left + 38.0f, r.top, r.right - 12.0f, r.bottom), ink, vd::Style().Size(13));
@@ -537,8 +538,8 @@ namespace ChronoUI {
 			if (layer) rt->PushLayer(D2D1::LayerParameters(D2D1::InfiniteRect(), nullptr,
 				D2D1_ANTIALIAS_MODE_PER_PRIMITIVE, D2D1::IdentityMatrix(), m_anim), layer.Get());
 			vd::Shadow(rt, p, 8.0f, 0.18f, 5);
-			vd::Fill(rt, p, vd::Col(0xFFFFFF), 8.0f);
-			vd::Stroke(rt, p, vd::Col(0xE5E7EB), 8.0f, 1.0f);
+			vd::Fill(rt, p, vctl::Surface(), 8.0f);
+			vd::Stroke(rt, p, vctl::Border(), 8.0f, 1.0f);
 			DrawPanel(rt, p);
 			if (layer) rt->PopLayer();
 		}
@@ -720,7 +721,7 @@ namespace ChronoUI {
 			vd::Text(rt, head, D2D1::RectF(p.left + 16.0f, p.top + 6.0f, p.right - 80.0f, p.top + kHead), vctl::Ink(), vd::Style().Size(14).Bold());
 			for (int dir = -1; dir <= 1; dir += 2) {
 				D2D1_RECT_F n = NavRect(p, dir);
-				if (m_hoverNav == dir) vd::Fill(rt, n, vd::Col(0x000000, 0.06f), 6.0f);
+				if (m_hoverNav == dir) vd::Fill(rt, n, vctl::Hover(0.06f), 6.0f);
 				vd::Chevron(rt, vd::CX(n), vd::CY(n), dir < 0 ? 90.0f : -90.0f, vctl::Ink());
 			}
 			for (int k = 0; k < 7; ++k)
@@ -731,9 +732,9 @@ namespace ChronoUI {
 				D2D1_RECT_F r = CellRect(p, i);
 				bool sel = vdate::Same(d, m_v), inMonth = d.m == m_view.m;
 				if (sel)                    vd::Circle(rt, vd::CX(r), vd::CY(r), 15.0f, m_accent);
-				else if (i == m_hoverCell)  vd::Circle(rt, vd::CX(r), vd::CY(r), 15.0f, vd::Col(0x000000, 0.06f));
+				else if (i == m_hoverCell)  vd::Circle(rt, vd::CX(r), vd::CY(r), 15.0f, vctl::Hover(0.06f));
 				if (!sel && vdate::Same(d, today)) vd::Ring(rt, vd::CX(r), vd::CY(r), 15.0f, m_accent, 1.5f);
-				vd::Text(rt, std::to_wstring(d.d), r, sel ? vd::Col(0xFFFFFF) : (inMonth ? vctl::Ink() : vd::Col(0xB0B7C3)), vd::Style().Size(12).Center());
+				vd::Text(rt, std::to_wstring(d.d), r, sel ? vd::Col(0xFFFFFF) : (inMonth ? vctl::Ink() : vctl::Dim()), vd::Style().Size(12).Center());
 			}
 		}
 	public:
@@ -745,8 +746,8 @@ namespace ChronoUI {
 		void OnChange(std::function<void(VDate)> cb) { m_cb = std::move(cb); }
 	protected:
 		void DrawButton(ID2D1RenderTarget* rt) override {
-			vd::Fill(rt, m_bounds, m_hovered && !m_open ? vd::Col(0xF9FAFB) : vd::Col(0xFFFFFF), 6.0f);
-			vd::Stroke(rt, m_bounds, (m_focused || m_open) ? m_accent : vd::Col(0xD1D5DB), 6.0f, 1.5f);
+			vd::Fill(rt, m_bounds, m_hovered && !m_open ? vctl::Subtle() : vctl::Surface(), 6.0f);
+			vd::Stroke(rt, m_bounds, (m_focused || m_open) ? m_accent : vctl::Outline(), 6.0f, 1.5f);
 			vd::Text(rt, vdate::Format(m_v), D2D1::RectF(m_bounds.left + 12.0f, m_bounds.top, m_bounds.right - 36.0f, m_bounds.bottom), vctl::Ink(), vd::Style().Size(13));
 			vd::Text(rt, L"\xE787", vd::Rect(m_bounds.right - 34.0f, m_bounds.top, 30.0f, vd::H(m_bounds)), vctl::Muted(), vd::Style().Icon().Size(14).Center());
 		}
@@ -798,21 +799,21 @@ namespace ChronoUI {
 			vd::Text(rt, L"Hour", vd::Rect(p.left + kPad, p.top + kPad, 100.0f, kLabel), vctl::Muted(), vd::Style().Size(11).Bold());
 			for (int i = 0; i < 24; ++i) {
 				D2D1_RECT_F r = HourCell(p, i); bool sel = i == m_v.h;
-				if (sel) vd::Circle(rt, vd::CX(r), vd::CY(r), 15.0f, m_accent); else if (i == m_hoverH) vd::Circle(rt, vd::CX(r), vd::CY(r), 15.0f, vd::Col(0x000000, 0.06f));
+				if (sel) vd::Circle(rt, vd::CX(r), vd::CY(r), 15.0f, m_accent); else if (i == m_hoverH) vd::Circle(rt, vd::CX(r), vd::CY(r), 15.0f, vctl::Hover(0.06f));
 				vd::Text(rt, std::to_wstring(i), r, sel ? vd::Col(0xFFFFFF) : vctl::Ink(), vd::Style().Size(12).Center());
 			}
 			float my = p.top + kPad + kLabel + kCell * 4.0f + 12.0f;
 			vd::Text(rt, L"Minute", vd::Rect(p.left + kPad, my, 100.0f, kLabel), vctl::Muted(), vd::Style().Size(11).Bold());
 			for (int k = 0; k < 12; ++k) {
 				D2D1_RECT_F r = MinCell(p, k); bool sel = k * 5 == m_v.m;
-				if (sel) vd::Circle(rt, vd::CX(r), vd::CY(r), 15.0f, m_accent); else if (k == m_hoverM) vd::Circle(rt, vd::CX(r), vd::CY(r), 15.0f, vd::Col(0x000000, 0.06f));
+				if (sel) vd::Circle(rt, vd::CX(r), vd::CY(r), 15.0f, m_accent); else if (k == m_hoverM) vd::Circle(rt, vd::CX(r), vd::CY(r), 15.0f, vctl::Hover(0.06f));
 				wchar_t t[8]; swprintf_s(t, L"%02d", k * 5);
 				vd::Text(rt, t, r, sel ? vd::Col(0xFFFFFF) : vctl::Ink(), vd::Style().Size(12).Center());
 			}
 		}
 		void DrawButton(ID2D1RenderTarget* rt) override {
-			vd::Fill(rt, m_bounds, m_hovered && !m_open ? vd::Col(0xF9FAFB) : vd::Col(0xFFFFFF), 6.0f);
-			vd::Stroke(rt, m_bounds, (m_focused || m_open) ? m_accent : vd::Col(0xD1D5DB), 6.0f, 1.5f);
+			vd::Fill(rt, m_bounds, m_hovered && !m_open ? vctl::Subtle() : vctl::Surface(), 6.0f);
+			vd::Stroke(rt, m_bounds, (m_focused || m_open) ? m_accent : vctl::Outline(), 6.0f, 1.5f);
 			vd::Text(rt, Format(), D2D1::RectF(m_bounds.left + 12.0f, m_bounds.top, m_bounds.right - 36.0f, m_bounds.bottom), vctl::Ink(), vd::Style().Size(13));
 			vd::Text(rt, L"\xE823", vd::Rect(m_bounds.right - 34.0f, m_bounds.top, 30.0f, vd::H(m_bounds)), vctl::Muted(), vd::Style().Icon().Size(14).Center());
 		}
@@ -855,16 +856,16 @@ namespace ChronoUI {
 			float ax = vd::Clamp(vd::CX(m_anchor), p.left + 20.0f, p.right - 20.0f);
 			bool below = p.top >= m_anchor.bottom - 1.0f;
 			float ey = below ? p.top : p.bottom, dir = below ? -1.0f : 1.0f;
-			vd::Polyline(rt, { D2D1::Point2F(ax - 9.0f, ey), D2D1::Point2F(ax, ey + 9.0f * dir), D2D1::Point2F(ax + 9.0f, ey) }, vd::Col(0xFFFFFF), 1.0f, true);
-			vd::Polyline(rt, { D2D1::Point2F(ax - 9.0f, ey), D2D1::Point2F(ax, ey + 9.0f * dir), D2D1::Point2F(ax + 9.0f, ey) }, vd::Col(0xE5E7EB), 1.0f);
+			vd::Polyline(rt, { D2D1::Point2F(ax - 9.0f, ey), D2D1::Point2F(ax, ey + 9.0f * dir), D2D1::Point2F(ax + 9.0f, ey) }, vctl::Surface(), 1.0f, true);
+			vd::Polyline(rt, { D2D1::Point2F(ax - 9.0f, ey), D2D1::Point2F(ax, ey + 9.0f * dir), D2D1::Point2F(ax + 9.0f, ey) }, vctl::Border(), 1.0f);
 			vd::Text(rt, m_title, vd::Rect(p.left + 16.0f, p.top + 16.0f, m_pw - 64.0f, 24.0f), vctl::Ink(), vd::Style().Size(14).Bold());
 			vd::Text(rt, m_body, vd::Rect(p.left + 16.0f, p.top + 48.0f, m_pw - 32.0f, BodyH() + 4.0f), vctl::Ink(), vd::Style().Size(13).Wrap().Top());
 			D2D1_RECT_F c = CloseRect(p);
-			if (m_hover == 1) vd::Fill(rt, c, vd::Col(0x000000, 0.07f), 4.0f);
+			if (m_hover == 1) vd::Fill(rt, c, vctl::Hover(0.07f), 4.0f);
 			vd::Text(rt, L"\xE711", c, vctl::Muted(), vd::Style().Icon().Size(10).Center());
 			if (!m_action.empty()) {
 				D2D1_RECT_F a = ActionRect(p);
-				vd::Fill(rt, a, m_hover == 2 ? vd::Col(0x3B7AC8) : m_accent, 6.0f);
+				vd::Fill(rt, a, m_hover == 2 ? vctl::AccentHover() : m_accent, 6.0f);
 				vd::Text(rt, m_action, a, vd::Col(0xFFFFFF), vd::Style().Size(13).Bold().Center());
 			}
 		}
@@ -934,7 +935,7 @@ namespace ChronoUI {
 			for (int i = 0; i < Count(); ++i) {
 				D2D1_RECT_F r = ItemRect(i);
 				bool lit = i == m_sel;
-				if (i == m_hover && !lit) vd::Fill(rt, vd::Inset(r, 2.0f, 4.0f), vd::Col(0x000000, 0.04f), 6.0f);
+				if (i == m_hover && !lit) vd::Fill(rt, vd::Inset(r, 2.0f, 4.0f), vctl::Hover(0.04f), 6.0f);
 				D2D1_COLOR_F ink = lit ? vctl::Ink() : vctl::Muted();
 				float x = r.left + m_pad;
 				const Item& it = m_items[(size_t)i];
@@ -1027,15 +1028,15 @@ namespace ChronoUI {
 			return VInputResult::Handled;
 		}
 		void OnDraw(ID2D1RenderTarget* rt) override {
-			vd::Fill(rt, m_bounds, vd::Col(0xFFFFFF), 8.0f);
-			vd::Stroke(rt, m_bounds, m_focused ? vd::Alpha(m_accent, 0.6f) : vd::Col(0xE5E7EB), 8.0f, 1.0f);
+			vd::Fill(rt, m_bounds, vctl::Surface(), 8.0f);
+			vd::Stroke(rt, m_bounds, m_focused ? vd::Alpha(m_accent, 0.6f) : vctl::Border(), 8.0f, 1.0f);
 			std::wstring head = m_months ? std::to_wstring(m_view.y) : std::wstring(vdate::MonthName(m_view.m)) + L" " + std::to_wstring(m_view.y);
 			D2D1_RECT_F hr = HeadRect();
-			if (m_hoverHead) vd::Fill(rt, vd::Rect(hr.left, hr.top, vd::TextWidth(head, vd::Style().Size(14).Bold()) + 24.0f, vd::H(hr)), vd::Col(0x000000, 0.05f), 6.0f);
+			if (m_hoverHead) vd::Fill(rt, vd::Rect(hr.left, hr.top, vd::TextWidth(head, vd::Style().Size(14).Bold()) + 24.0f, vd::H(hr)), vctl::Hover(0.05f), 6.0f);
 			vd::Text(rt, head, D2D1::RectF(hr.left + 12.0f, hr.top, hr.right, hr.bottom), vctl::Ink(), vd::Style().Size(14).Bold());
 			for (int dir = -1; dir <= 1; dir += 2) {
 				D2D1_RECT_F n = NavRect(dir);
-				if (m_hoverNav == dir) vd::Fill(rt, n, vd::Col(0x000000, 0.06f), 6.0f);
+				if (m_hoverNav == dir) vd::Fill(rt, n, vctl::Hover(0.06f), 6.0f);
 				vd::Chevron(rt, vd::CX(n), vd::CY(n), dir < 0 ? 90.0f : -90.0f, vctl::Ink());
 			}
 			VDate today = vdate::Today();
@@ -1044,7 +1045,7 @@ namespace ChronoUI {
 					D2D1_RECT_F r = MonthRect(m);
 					bool sel = m_v.y == m_view.y && m_v.m == m + 1, now = today.y == m_view.y && today.m == m + 1;
 					if (sel)                vd::Fill(rt, r, m_accent, 8.0f);
-					else if (m == m_hover)  vd::Fill(rt, r, vd::Col(0x000000, 0.05f), 8.0f);
+					else if (m == m_hover)  vd::Fill(rt, r, vctl::Hover(0.05f), 8.0f);
 					if (now && !sel)        vd::Stroke(rt, r, m_accent, 8.0f, 1.5f);
 					vd::Text(rt, std::wstring(vdate::MonthName(m + 1)).substr(0, 3), r, sel ? vd::Col(0xFFFFFF) : vctl::Ink(), vd::Style().Size(13).Center());
 				}
@@ -1059,9 +1060,9 @@ namespace ChronoUI {
 				D2D1_RECT_F r = CellRect(i);
 				bool sel = vdate::Same(d, m_v), inMonth = d.m == m_view.m;
 				if (sel)                   vd::Circle(rt, vd::CX(r), vd::CY(r), rad, m_accent);
-				else if (i == m_hover)     vd::Circle(rt, vd::CX(r), vd::CY(r), rad, vd::Col(0x000000, 0.06f));
+				else if (i == m_hover)     vd::Circle(rt, vd::CX(r), vd::CY(r), rad, vctl::Hover(0.06f));
 				if (!sel && vdate::Same(d, today)) vd::Ring(rt, vd::CX(r), vd::CY(r), rad, m_accent, 1.5f);
-				vd::Text(rt, std::to_wstring(d.d), r, sel ? vd::Col(0xFFFFFF) : (inMonth ? vctl::Ink() : vd::Col(0xB0B7C3)), vd::Style().Size(12).Center());
+				vd::Text(rt, std::to_wstring(d.d), r, sel ? vd::Col(0xFFFFFF) : (inMonth ? vctl::Ink() : vctl::Dim()), vd::Style().Size(12).Center());
 			}
 		}
 	};

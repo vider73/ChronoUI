@@ -31,14 +31,11 @@
 
 using namespace ChronoUI;
 
-static const D2D1_COLOR_F kBg    = vd::Col(0xF3F3F3);
-static const D2D1_COLOR_F kText  = vd::Col(0x111827);
-static const D2D1_COLOR_F kMuted = vd::Col(0x6B7280);
 
 class VCard : public VirtualWidgetImpl {
 public:
 	const char* GetTypeName() const override { return "VCard"; }
-	void OnDraw(ID2D1RenderTarget* rt) override { vd::Fill(rt, m_bounds, vd::Col(0xFFFFFF), 10.0f); vd::Stroke(rt, m_bounds, vd::Col(0xE5E7EB), 10.0f, 1.0f); }
+	void OnDraw(ID2D1RenderTarget* rt) override { vd::Fill(rt, m_bounds, vctl::Surface(), 10.0f); vd::Stroke(rt, m_bounds, vctl::Border(), 10.0f, 1.0f); }
 };
 
 struct Room { const wchar_t* name; double rate; };
@@ -89,16 +86,17 @@ static void PaintPicture(ID2D1RenderTarget* rt, const D2D1_RECT_F& r, int room, 
 }
 
 // =============================================================================
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int) {
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR cmdLine, int) {
 	ChronoControllerImpl::Instance();
 
 	VirtualWindow win;
 	if (!win.Create(hInstance, L"ChronoUI \x2014 Booking", 1220, 780)) return 1;
-	win.SetBackground(kBg);
+	vtheme::SetDark(cmdLine && wcsstr(cmdLine, L"dark") != nullptr);       // "dark" on the command line
+	win.SetBackground(vtheme::Current().window);
 	HWND hwnd = win.GetHWND();
 	auto repaint = [hwnd] { InvalidateRect(hwnd, NULL, FALSE); };
-	auto label = [&](const std::wstring& text, float size = 13.0f, D2D1_COLOR_F col = kText) {
-		VLabel* l = win.Add<VLabel>(); l->Text(text).FontSize(size).Color(col); return l;
+	auto label = [&](const std::wstring& text, float size = 13.0f, bool muted = false) {
+		VLabel* l = win.Add<VLabel>(); l->Text(text).FontSize(size).Muted(muted); return l;
 	};
 	std::vector<VFlyout*> flyouts;
 
@@ -109,11 +107,14 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int) {
 
 	// --- header --------------------------------------------------------------------
 	auto* title = label(L"Sea View Hotel", 22.0f);
-	auto* sub   = label(L"Cala Blanca \x00B7 4 stars \x00B7 240 m from the beach", 12.0f, kMuted);
+	auto* sub   = label(L"Cala Blanca \x00B7 4 stars \x00B7 240 m from the beach", 12.0f, true);
 	auto* heart = win.Add<VAnimatedIcon>(L"\xEB52"); heart->Size(20.0f).Accent(vd::Col(0xDC2626));
-	auto* status = label(L"", 12.0f, kMuted);
+	auto* status = label(L"", 12.0f, true);
+	auto* darkLbl = label(L"Dark", 12.0f, true);
+	auto* dark = win.Add<VToggle>(); dark->Set(vtheme::IsDark());
+	dark->OnChange([&](bool on) { vtheme::SetDark(on); win.SetBackground(vtheme::Current().window); repaint(); });
 	bool favourite = false;
-	heart->OnClick([&] { favourite = !favourite; heart->Color(favourite ? vd::Col(0xDC2626) : kText); status->Text(favourite ? L"Saved to favourites." : L"Removed from favourites."); repaint(); });
+	heart->OnClick([&] { favourite = !favourite; heart->Color(favourite ? vd::Col(0xDC2626) : vctl::Ink()); status->Text(favourite ? L"Saved to favourites." : L"Removed from favourites."); repaint(); });
 	auto* notify = win.AddChrome<VToggleSplitButton>(L"Notify me"); notify->Attach(&win); flyouts.push_back(notify);
 	notify->Add(L"By e-mail", L"\xE715").Add(L"By SMS", L"\xE8BD").Add(L"Push", L"\xEA8F");
 	notify->OnChange([&](bool on) { status->Text(on ? L"You will hear about price drops." : L"Notifications off."); repaint(); });
@@ -122,23 +123,23 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int) {
 
 	// --- the filters pane ---------------------------------------------------------
 	auto* splitv = win.Add<VSplitView>(); splitv->SetMode(VSplitView::Mode::CompactInline).PaneWidth(276.0f);
-	auto* burger = win.Add<VButton>(); burger->Text(L"\x2630").Face(vd::Col(0x000000, 0.0f)).FaceHover(vd::Col(0x000000, 0.06f)).FacePress(vd::Col(0x000000, 0.1f)).TextColor(kText);
+	auto* burger = win.Add<VButton>(); burger->Text(L"\x2630").Face(vd::Col(0x000000, 0.0f)).FaceHover(vctl::Hover(0.06f)).FacePress(vctl::Hover(0.1f)).TextColor(vctl::Ink());
 	burger->OnClick([&] { splitv->Toggle(); });
-	auto* fGuests = label(L"GUESTS", 11.0f, kMuted);
+	auto* fGuests = label(L"GUESTS", 11.0f, true);
 	auto* guests = win.Add<VNumberBox>(); guests->Range(1.0, 6.0).Set(2.0);
-	auto* fIn = label(L"CHECK-IN", 11.0f, kMuted);
+	auto* fIn = label(L"CHECK-IN", 11.0f, true);
 	auto* cal = win.Add<VCalendarView>(); cal->Set(checkIn);
-	auto* fNights = label(L"NIGHTS", 11.0f, kMuted);
-	auto* minus = win.Add<VRepeatButton>(); minus->Text(L"\x2212").Face(vd::Col(0xE9E9E9)).FaceHover(vd::Col(0xDCDCDC)).FacePress(vd::Col(0xCFCFCF)).TextColor(kText);
-	auto* plus  = win.Add<VRepeatButton>(); plus->Text(L"+").Face(vd::Col(0xE9E9E9)).FaceHover(vd::Col(0xDCDCDC)).FacePress(vd::Col(0xCFCFCF)).TextColor(kText);
+	auto* fNights = label(L"NIGHTS", 11.0f, true);
+	auto* minus = win.Add<VRepeatButton>(); minus->Text(L"\x2212").Face(vctl::Track()).FaceHover(vctl::Outline()).FacePress(vctl::Dim()).TextColor(vctl::Ink());
+	auto* plus  = win.Add<VRepeatButton>(); plus->Text(L"+").Face(vctl::Track()).FaceHover(vctl::Outline()).FacePress(vctl::Dim()).TextColor(vctl::Ink());
 	auto* nightsLbl = label(L"3", 16.0f);
-	auto* fBreakfast = label(L"BREAKFAST", 11.0f, kMuted);
+	auto* fBreakfast = label(L"BREAKFAST", 11.0f, true);
 	auto* breakfast = win.Add<VToggle>(); breakfast->Set(true);
-	auto* fBudget = label(L"BUDGET", 11.0f, kMuted);
+	auto* fBudget = label(L"BUDGET", 11.0f, true);
 	auto* budget = win.Add<VSlider>(); budget->Set(0.5f).Format([](float v) { return L"\x20AC " + vd::Num(200.0 + 1800.0 * v); });
 	// the compact strip: one icon per filter
 	std::vector<VIcon*> compactIcons;
-	for (const wchar_t* g : { L"\xE716", L"\xE787", L"\xE708", L"\xEC32", L"\xE825" }) { auto* ic = win.Add<VIcon>(g); ic->Size(16.0f).Color(kMuted); compactIcons.push_back(ic); }
+	for (const wchar_t* g : { L"\xE716", L"\xE787", L"\xE708", L"\xEC32", L"\xE825" }) { auto* ic = win.Add<VIcon>(g); ic->Size(16.0f).Color(vctl::Muted()); compactIcons.push_back(ic); }
 
 	// --- gallery (pane 1) -----------------------------------------------------------
 	auto* two = win.Add<VTwoPaneView>(); two->Threshold(900.0f).Split(0.5f);
@@ -156,14 +157,14 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int) {
 	shareFly->OnPick([&](int i) { status->Text(L"Gallery: " + shareFly->At(i).label); repaint(); });
 	auto* priceTag = win.Add<VShape>(VShape::Kind::Polygon);
 	priceTag->Points({ { 0.0f, 0.5f }, { 0.22f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f }, { 0.22f, 1.0f } }).Fill(vd::Col(0x111827, 0.85f));
-	auto* priceLbl = label(L"", 13.0f, vd::Col(0xFFFFFF));
+	auto* priceLbl = label(L"", 13.0f); priceLbl->Color(vd::Col(0xFFFFFF));
 
 	// --- details (pane 2) -----------------------------------------------------------
 	auto* detailsCard = win.Add<VCard>();
 	auto* pivot = win.Add<VPivot>(std::vector<std::wstring>{ L"Overview", L"Reviews", L"Map" });
 	std::vector<VIcon*> amenities;
 	for (const wchar_t* g : { L"\xE701", L"\xEB6C", L"\xE7EC", L"\xECAD", L"\xE8FD" }) { auto* ic = win.Add<VIcon>(g); ic->Size(16.0f).Color(vd::Col(0x2563EB)); amenities.push_back(ic); }
-	auto* amenLbl = label(L"Wi-Fi \x00B7 parking \x00B7 pool \x00B7 spa \x00B7 restaurant", 12.0f, kMuted);
+	auto* amenLbl = label(L"Wi-Fi \x00B7 parking \x00B7 pool \x00B7 spa \x00B7 restaurant", 12.0f, true);
 	auto* rich = win.Add<VRichText>();
 	rich->Set(L"A quiet **family-run hotel** on the cliff above Cala Blanca, twelve rooms and a terrace that looks straight at the sea. "
 	          L"Breakfast is served until 11, the pool is heated from *April to October*, and the kitchen closes at `23:00`. "
@@ -186,11 +187,11 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int) {
 		float y = 0.0f;
 		for (const Review& rv : kReviews) {
 			D2D1_RECT_F card = vd::Rect(0.0f, y, vd::W(r), 78.0f);
-			vd::Fill(rt, vd::Inset(card, 0.0f, 4.0f), vd::Col(0xF9FAFB), 8.0f);
+			vd::Fill(rt, vd::Inset(card, 0.0f, 4.0f), vctl::Subtle(), 8.0f);
 			vd::Avatar(rt, 28.0f, y + 39.0f, 16.0f, rv.name);
-			vd::Text(rt, rv.name, vd::Rect(56.0f, y + 12.0f, 200.0f, 20.0f), kText, vd::Style().Size(13).Bold());
+			vd::Text(rt, rv.name, vd::Rect(56.0f, y + 12.0f, 200.0f, 20.0f), vctl::Ink(), vd::Style().Size(13).Bold());
 			vd::Text(rt, std::wstring((size_t)rv.stars, L'\x2605') + std::wstring((size_t)(5 - rv.stars), L'\x2606'), vd::Rect(vd::W(r) - 90.0f, y + 12.0f, 80.0f, 20.0f), vd::Col(0xF59E0B), vd::Style().Size(13).Right());
-			vd::Text(rt, rv.text, vd::Rect(56.0f, y + 34.0f, vd::W(r) - 70.0f, 36.0f), kMuted, vd::Style().Size(12).Wrap().Top());
+			vd::Text(rt, rv.text, vd::Rect(56.0f, y + 34.0f, vd::W(r) - 70.0f, 36.0f), vctl::Muted(), vd::Style().Size(12).Wrap().Top());
 			y += 84.0f;
 		}
 	};
@@ -205,7 +206,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int) {
 		vd::Polyline(rt, { D2D1::Point2F(px, py), D2D1::Point2F(px - 16.0f, py - 30.0f), D2D1::Point2F(px + 16.0f, py - 30.0f) }, vd::Col(0xDC2626), 1.0f, true);
 		vd::Circle(rt, px, py - 32.0f, 18.0f, vd::Col(0xDC2626));
 		vd::Circle(rt, px, py - 32.0f, 7.0f, vd::Col(0xFFFFFF));
-		vd::Text(rt, L"Sea View Hotel", vd::Rect(px + 26.0f, py - 46.0f, 200.0f, 28.0f), kText, vd::Style().Size(14).Bold());
+		vd::Text(rt, L"Sea View Hotel", vd::Rect(px + 26.0f, py - 46.0f, 200.0f, 28.0f), vd::Col(0x111827), vd::Style().Size(14).Bold());
 	};
 	auto showTab = [&](int i) {
 		rich->SetVisible(i == 0); scroll->SetVisible(i != 0);
@@ -255,6 +256,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int) {
 		dialog->Cover(W, H);
 		title ->SetBounds(vd::Rect(24.0f, 14.0f, 400.0f, 30.0f));
 		sub   ->SetBounds(vd::Rect(24.0f, 42.0f, 500.0f, 18.0f));
+		darkLbl->SetBounds(vd::Rect(W - 420.0f, 26.0f, 36.0f, 24.0f)); dark->SetBounds(vd::Rect(W - 386.0f, 26.0f, 50.0f, 24.0f));
 		heart ->SetBounds(vd::Rect(W - 330.0f, 20.0f, 36.0f, 36.0f));
 		notify->SetBounds(vd::Rect(W - 284.0f, 22.0f, 140.0f, 32.0f));
 		book  ->SetBounds(vd::Rect(W - 134.0f, 20.0f, 110.0f, 36.0f));

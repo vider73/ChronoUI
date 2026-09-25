@@ -1,0 +1,40 @@
+# The clean-machine test, on every push: a fresh Windows runner, Visual Studio
+# and the Windows SDK, nothing installed first. Warnings fail the build so the
+# tree stays warning-free.
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -A x64
+
+      - name: Build (Release)
+        run: cmake --build build --config Release -- /m /warnaserror
+
+      - name: What came out
+        shell: pwsh
+        run: |
+          $exes = Get-ChildItem build/Release -Filter *.exe
+          $dlls = Get-ChildItem build/Release -Filter *.dll
+          "$($exes.Count) executables, $($dlls.Count) DLLs"
+          $exes.Name
+
+      - name: Upload the executables
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChronoUI-examples-${{ github.sha }}
+          path: |
+            build/Release/*.exe
+            build/Release/*.dll
+            build/Release/assets/**
+          retention-days: 14

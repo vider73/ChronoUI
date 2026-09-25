@@ -63,7 +63,7 @@ namespace ChronoUI {
 		                 const D2D1_RECT_F& r, bool focused, D2D1_COLOR_F ink, const vd::Style& st)
 		{
 			rt->PushAxisAlignedClip(r, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
-			if (shown.empty()) vd::Text(rt, placeholder, r, vd::Col(0x9CA3AF), st);
+			if (shown.empty()) vd::Text(rt, placeholder, r, vctl::Dim(), st);
 			else               vd::Text(rt, shown, r, ink, st);
 			if (focused) {
 				float cx = r.left + vd::TextWidth(shown.substr(0, (size_t)ln.caret), st) + 0.5f;
@@ -181,17 +181,17 @@ namespace ChronoUI {
 			m_err = false; return VInputResult::Handled;
 		}
 		void OnDraw(ID2D1RenderTarget* rt) override {
-			vd::Fill(rt, m_bounds, vd::Col(0xFFFFFF), 6.0f);
-			D2D1_COLOR_F border = m_err ? vd::Col(0xDC2626) : (m_focused ? m_accent : vd::Col(0xD1D5DB));
+			vd::Fill(rt, m_bounds, vctl::Surface(), 6.0f);
+			D2D1_COLOR_F border = m_err ? vd::Col(0xDC2626) : (m_focused ? m_accent : vctl::Outline());
 			vd::Stroke(rt, m_bounds, border, 6.0f, m_focused || m_err ? 1.5f : 1.0f);
 			vtext::Draw(rt, m_ed, m_ed.text, m_placeholder, TextRect(), m_focused, m_err ? vd::Col(0xDC2626) : vctl::Ink(), St());
 			if (!m_spin) return;
 			D2D1_RECT_F up = UpRect(), dn = DownRect();
-			vd::Line(rt, up.left, m_bounds.top + 6.0f, up.left, m_bounds.bottom - 6.0f, vd::Col(0xE5E7EB), 1.0f);
+			vd::Line(rt, up.left, m_bounds.top + 6.0f, up.left, m_bounds.bottom - 6.0f, vctl::Border(), 1.0f);
 			if (m_hover == 1)  vd::Fill(rt, vd::Inset(up, 3.0f, 4.0f), vctl::Track(), 4.0f);
 			if (m_hover == -1) vd::Fill(rt, vd::Inset(dn, 3.0f, 4.0f), vctl::Track(), 4.0f);
-			vd::Chevron(rt, vd::CX(up), vd::CY(up) + 1.0f, 180.0f, m_v < m_max ? vctl::Ink() : vd::Col(0xD1D5DB), 4.0f);
-			vd::Chevron(rt, vd::CX(dn), vd::CY(dn) - 1.0f, 0.0f,   m_v > m_min ? vctl::Ink() : vd::Col(0xD1D5DB), 4.0f);
+			vd::Chevron(rt, vd::CX(up), vd::CY(up) + 1.0f, 180.0f, m_v < m_max ? vctl::Ink() : vctl::Outline(), 4.0f);
+			vd::Chevron(rt, vd::CX(dn), vd::CY(dn) - 1.0f, 0.0f,   m_v > m_min ? vctl::Ink() : vctl::Outline(), 4.0f);
 		}
 	};
 
@@ -242,8 +242,8 @@ namespace ChronoUI {
 			Fire(); return VInputResult::Handled;
 		}
 		void OnDraw(ID2D1RenderTarget* rt) override {
-			vd::Fill(rt, m_bounds, vd::Col(0xFFFFFF), 6.0f);
-			vd::Stroke(rt, m_bounds, m_focused ? m_accent : vd::Col(0xD1D5DB), 6.0f, m_focused ? 1.5f : 1.0f);
+			vd::Fill(rt, m_bounds, vctl::Surface(), 6.0f);
+			vd::Stroke(rt, m_bounds, m_focused ? m_accent : vctl::Outline(), 6.0f, m_focused ? 1.5f : 1.0f);
 			vtext::Draw(rt, m_ed, Shown(), m_placeholder, TextRect(), m_focused, vctl::Ink(), St());
 			D2D1_RECT_F e = EyeRect();
 			if (m_hoverEye || m_reveal) vd::Fill(rt, vd::Inset(e, 4.0f, 5.0f), m_reveal ? vd::Alpha(m_accent, 0.15f) : vctl::Track(), 4.0f);
@@ -363,7 +363,7 @@ namespace ChronoUI {
 				UINT32 n = 0; l->HitTestTextRange(r.start, r.len, o.x, o.y, nullptr, 0, &n);
 				std::vector<DWRITE_HIT_TEST_METRICS> hm((size_t)(std::max)(1u, n));
 				if (FAILED(l->HitTestTextRange(r.start, r.len, o.x, o.y, hm.data(), n, &n))) continue;
-				for (UINT32 k = 0; k < n; ++k) vd::Fill(rt, vd::Rect(hm[k].left - 2.0f, hm[k].top, hm[k].width + 4.0f, hm[k].height), vd::Col(0xF3F4F6), 3.0f);
+				for (UINT32 k = 0; k < n; ++k) vd::Fill(rt, vd::Rect(hm[k].left - 2.0f, hm[k].top, hm[k].width + 4.0f, hm[k].height), vctl::Subtle(), 3.0f);
 			}
 			auto link = vd::Brush(rt, m_accent), hot = vd::Brush(rt, vd::Col(0x1D4ED8));
 			for (size_t i = 0; i < m_runs.size(); ++i)

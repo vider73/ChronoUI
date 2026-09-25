@@ -108,7 +108,7 @@ namespace ChronoUI {
 			Clamp(); return VInputResult::Handled;
 		}
 		void OnDraw(ID2D1RenderTarget* rt) override {
-			if (m_border) { vd::Fill(rt, m_bounds, vd::Col(0xFFFFFF), 8.0f); vd::Stroke(rt, m_bounds, m_focused ? vd::Alpha(vctl::Blue(), 0.6f) : vd::Col(0xE5E7EB), 8.0f, 1.0f); }
+			if (m_border) { vd::Fill(rt, m_bounds, vctl::Surface(), 8.0f); vd::Stroke(rt, m_bounds, m_focused ? vd::Alpha(vctl::Blue(), 0.6f) : vctl::Border(), 8.0f, 1.0f); }
 			rt->PushAxisAlignedClip(vd::Inset(m_bounds, 1.0f, 1.0f), D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
 			if (m_paint) {
 				D2D1_MATRIX_3X2_F old; rt->GetTransform(&old);
@@ -116,11 +116,11 @@ namespace ChronoUI {
 				m_paint(rt, vd::Rect(0.0f, 0.0f, m_cw, m_ch));
 				rt->SetTransform(old);
 			}
-			if (MaxY() > 0.0f) vd::Fill(rt, VThumb(), vd::Col(0x000000, m_hover == 1 || m_drag == 1 ? 0.4f : 0.22f), 2.5f);
-			if (MaxX() > 0.0f) vd::Fill(rt, HThumb(), vd::Col(0x000000, m_hover == 2 || m_drag == 2 ? 0.4f : 0.22f), 2.5f);
+			if (MaxY() > 0.0f) vd::Fill(rt, VThumb(), vctl::Hover(m_hover == 1 || m_drag == 1 ? 0.4f : 0.22f), 2.5f);
+			if (MaxX() > 0.0f) vd::Fill(rt, HThumb(), vctl::Hover(m_hover == 2 || m_drag == 2 ? 0.4f : 0.22f), 2.5f);
 			if (fabsf(m_zoom - 1.0f) > 0.01f) {
 				D2D1_RECT_F pill = vd::Rect(m_bounds.left + 8.0f, m_bounds.bottom - 30.0f, 52.0f, 22.0f);
-				vd::Fill(rt, pill, vd::Col(0x1F2937, 0.85f), 11.0f);
+				vd::Fill(rt, pill, vd::Alpha(vctl::Pill(), 0.85f), 11.0f);
 				vd::Text(rt, vd::Num(m_zoom * 100.0) + L"%", pill, vd::Col(0xFFFFFF), vd::Style().Size(11).Bold().Center());
 			}
 			rt->PopAxisAlignedClip();
@@ -135,7 +135,8 @@ namespace ChronoUI {
 		Mode  m_mode = Mode::Inline;
 		bool  m_open = true;
 		float m_anim = 1.0f, m_paneW = 300.0f, m_compact = 48.0f;
-		D2D1_COLOR_F m_paneBg = vd::Col(0xF3F3F3);
+		D2D1_COLOR_F m_paneBg = {};
+		bool  m_paneBgSet = false;                       // else the theme's window colour at draw time
 		std::function<void()>     m_layout;
 		std::function<void(bool)> m_cb;
 		bool  Compact() const { return m_mode == Mode::CompactOverlay || m_mode == Mode::CompactInline; }
@@ -147,7 +148,7 @@ namespace ChronoUI {
 		VSplitView& SetMode(Mode m)                { m_mode = m; return *this; }
 		VSplitView& PaneWidth(float w)             { m_paneW = w; return *this; }
 		VSplitView& CompactWidth(float w)          { m_compact = w; return *this; }
-		VSplitView& PaneBackground(D2D1_COLOR_F c) { m_paneBg = c; return *this; }
+		VSplitView& PaneBackground(D2D1_COLOR_F c) { m_paneBg = c; m_paneBgSet = true; return *this; }
 		VSplitView& Open(bool o) { if (m_open != o) { m_open = o; if (m_cb) m_cb(o); } return *this; }
 		void Toggle()            { Open(!m_open); }
 		bool IsOpen() const      { return m_open; }
@@ -185,8 +186,8 @@ namespace ChronoUI {
 			if (!PaneVisible()) return;
 			D2D1_RECT_F p = PaneRect();
 			if (Overlay() && m_anim > 0.01f) vd::Shadow(rt, p, 0.0f, 0.18f * m_anim, 5);
-			vd::Fill(rt, p, m_paneBg);
-			vd::Line(rt, p.right - 0.5f, p.top, p.right - 0.5f, p.bottom, vd::Col(0xE5E7EB), 1.0f);
+			vd::Fill(rt, p, m_paneBgSet ? m_paneBg : vtheme::Current().window);
+			vd::Line(rt, p.right - 0.5f, p.top, p.right - 0.5f, p.bottom, vctl::Border(), 1.0f);
 		}
 	};
 
@@ -234,7 +235,7 @@ namespace ChronoUI {
 		void OnDraw(ID2D1RenderTarget* rt) override {
 			D2D1_RECT_F d = Divider();
 			float cx = vd::CX(d), cy = vd::CY(d);
-			D2D1_COLOR_F c = (m_hover || m_drag) ? vctl::Blue() : vd::Col(0xD1D5DB);
+			D2D1_COLOR_F c = (m_hover || m_drag) ? vctl::Blue() : vctl::Outline();
 			if (m_hover || m_drag) vd::Fill(rt, Wide() ? vd::Rect(cx - 1.0f, d.top, 2.0f, vd::H(d)) : vd::Rect(d.left, cy - 1.0f, vd::W(d), 2.0f), vd::Alpha(c, 0.5f));
 			for (int k = -1; k <= 1; ++k)
 				if (Wide()) vd::Circle(rt, cx, cy + 7.0f * (float)k, 1.8f, c); else vd::Circle(rt, cx + 7.0f * (float)k, cy, 1.8f, c);

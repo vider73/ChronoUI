@@ -69,6 +69,47 @@ namespace ChronoUI {
 	// -----------------------------------------------------------------------
 	enum class VInputResult { NotHandled, Handled, Capture };
 
+	// -----------------------------------------------------------------------
+	// VTheme — the palette every virtual widget paints with. Widgets read it
+	// at draw time through vtheme::Current() (and the vctl:: shorthands in
+	// VControls.hpp), so vtheme::SetDark(true) + a repaint restyles a whole
+	// window. An app sets its window background from it:
+	//     win.SetBackground(vtheme::Current().window);
+	// Widgets that take an explicit colour (VLabel::Color, VButton::Face...)
+	// keep it in both themes; the accent is the same blue in both.
+	// -----------------------------------------------------------------------
+	struct VTheme {
+		D2D1_COLOR_F window, surface, subtle, ink, muted, dim, border, outline, track,
+		             accent, accentHover, accentPress, pill;
+		bool dark = false;
+	};
+	namespace vtheme {
+		inline VTheme Light() {
+			VTheme t;
+			t.window = D2D1::ColorF(0xF3F3F3); t.surface = D2D1::ColorF(0xFFFFFF); t.subtle = D2D1::ColorF(0xF3F4F6);
+			t.ink = D2D1::ColorF(0x111827);    t.muted = D2D1::ColorF(0x6B7280);   t.dim = D2D1::ColorF(0x9CA3AF);
+			t.border = D2D1::ColorF(0xE5E7EB); t.outline = D2D1::ColorF(0xD1D5DB); t.track = D2D1::ColorF(0xE5E7EB);
+			t.accent = D2D1::ColorF(0x4A90E2); t.accentHover = D2D1::ColorF(0x3B7AC8); t.accentPress = D2D1::ColorF(0x2E63A6);
+			t.pill = D2D1::ColorF(0x1F2937);   t.dark = false;
+			return t;
+		}
+		inline VTheme Dark() {
+			VTheme t;
+			t.window = D2D1::ColorF(0x202020); t.surface = D2D1::ColorF(0x2B2B2B); t.subtle = D2D1::ColorF(0x353535);
+			t.ink = D2D1::ColorF(0xF3F4F6);    t.muted = D2D1::ColorF(0xA1A1AA);   t.dim = D2D1::ColorF(0x71717A);
+			t.border = D2D1::ColorF(0x3F3F46); t.outline = D2D1::ColorF(0x52525B); t.track = D2D1::ColorF(0x3F3F46);
+			t.accent = D2D1::ColorF(0x4A90E2); t.accentHover = D2D1::ColorF(0x5B9CEB); t.accentPress = D2D1::ColorF(0x3B7AC8);
+			t.pill = D2D1::ColorF(0x3F3F46);   t.dark = true;
+			return t;
+		}
+		inline VTheme& Current()          { static VTheme t = Light(); return t; }
+		inline void   Set(const VTheme& t){ Current() = t; }
+		inline void   SetDark(bool dark)  { Set(dark ? Dark() : Light()); }
+		inline bool   IsDark()            { return Current().dark; }
+		// A translucent wash for hover and pressed states: black on light, white on dark.
+		inline D2D1_COLOR_F Overlay(float alpha) { return D2D1::ColorF(Current().dark ? 0xFFFFFF : 0x000000, alpha); }
+	}
+
 	class IVirtualWidget;
 	class VirtualWindow;
 
@@ -723,7 +764,8 @@ namespace ChronoUI {
 			D2D1_ROUNDED_RECT rr = D2D1::RoundedRect(r, 5.0f, 5.0f);
 
 			ComPtr<ID2D1SolidColorBrush> pBg, pBorder, pText;
-			pRT->CreateSolidColorBrush(D2D1::ColorF(0x1F2937, 0.96f), &pBg);
+			D2D1_COLOR_F pill = vtheme::Current().pill; pill.a = 0.96f;
+			pRT->CreateSolidColorBrush(pill,                            &pBg);
 			pRT->CreateSolidColorBrush(D2D1::ColorF(0x000000, 0.20f), &pBorder);
 			pRT->CreateSolidColorBrush(D2D1::ColorF(0xF5F7FA),         &pText);
 			if (pBg)     pRT->FillRoundedRectangle(rr, pBg.Get());
@@ -1088,15 +1130,19 @@ namespace ChronoUI {
 		std::wstring m_text;
 		float m_fontSize = 14.0f;
 		D2D1_COLOR_F m_color = D2D1::ColorF(0x222222);
+		bool  m_colorSet = false, m_muted = false;   // no explicit colour: the theme's ink (or muted) at draw time
 	public:
 		const char* GetTypeName() const override { return "VLabel"; }
 
 		VLabel& Text(const std::wstring& t) { m_text = t; return *this; }
 		VLabel& FontSize(float px)          { m_fontSize = px; return *this; }
-		VLabel& Color(D2D1_COLOR_F c)       { m_color = c; return *this; }
+		VLabel& Color(D2D1_COLOR_F c)       { m_color = c; m_colorSet = true; return *this; }
+		VLabel& Muted(bool m)               { m_muted = m; m_colorSet = false; return *this; }
+		const std::wstring& GetText() const { return m_text; }
 
 		void OnDraw(ID2D1RenderTarget* pRT) override {
 			if (m_text.empty()) return;
+			if (!m_colorSet) m_color = m_muted ? vtheme::Current().muted : vtheme::Current().ink;
 			ComPtr<IDWriteTextFormat> pTextFormat;
 			ChronoControllerImpl::Instance().m_pDWriteFactory->CreateTextFormat(
 				L"Segoe UI", NULL,
@@ -1235,11 +1281,12 @@ namespace ChronoUI {
 		float                     m_radius   = 6.0f;
 		std::function<void(size_t)> m_onChange;
 
-		D2D1_COLOR_F m_face       = D2D1::ColorF(0xF6F7F9);
-		D2D1_COLOR_F m_faceHover  = D2D1::ColorF(0xEAECEF);
-		D2D1_COLOR_F m_border     = D2D1::ColorF(0xD8DBDF);
-		D2D1_COLOR_F m_textColor  = D2D1::ColorF(0x111111);
-		D2D1_COLOR_F m_chevColor  = D2D1::ColorF(0x6B7280);
+		// Defaults come from the theme current when the combo is made.
+		D2D1_COLOR_F m_face       = vtheme::Current().subtle;
+		D2D1_COLOR_F m_faceHover  = vtheme::Current().track;
+		D2D1_COLOR_F m_border     = vtheme::Current().outline;
+		D2D1_COLOR_F m_textColor  = vtheme::Current().ink;
+		D2D1_COLOR_F m_chevColor  = vtheme::Current().muted;
 
 	public:
 		const char* GetTypeName() const override { return "VCombo"; }

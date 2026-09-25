@@ -52,7 +52,7 @@ namespace ChronoUI {
 	// -------------------------------------------------------------------------
 	class VRating : public VirtualWidgetImpl {
 		int m_max = 5, m_v = 0, m_hover = 0;         // hover = stars under the mouse (1-based), 0 = none
-		D2D1_COLOR_F m_lit = vd::Col(0xF59E0B), m_dim = vd::Col(0xD1D5DB);
+		D2D1_COLOR_F m_lit = vd::Col(0xF59E0B), m_dim = vctl::Outline();
 		std::function<void(int)> m_cb;
 		float StarW() const { return vd::H(m_bounds); }
 		int StarAt(float x) const { int i = (int)((x - m_bounds.left) / (StarW() + 4.0f)) + 1; return (i >= 1 && i <= m_max) ? i : 0; }

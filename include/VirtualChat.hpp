@@ -1953,12 +1953,13 @@ namespace ChronoUI {
 		bool  m_caretVisible = true;
 		float m_freshTypingS = 0.0f;   // seconds since last keystroke
 
-		D2D1_COLOR_F m_bg          = D2D1::ColorF(0xF7F8F9);
-		D2D1_COLOR_F m_bgFocused   = D2D1::ColorF(0xFFFFFF);
-		D2D1_COLOR_F m_border      = D2D1::ColorF(0xD8DBDF);
+		// Defaults come from the theme current when the input is made.
+		D2D1_COLOR_F m_bg          = vtheme::Current().subtle;
+		D2D1_COLOR_F m_bgFocused   = vtheme::Current().surface;
+		D2D1_COLOR_F m_border      = vtheme::Current().outline;
 		D2D1_COLOR_F m_borderFocus = D2D1::ColorF(0x2563EB);
-		D2D1_COLOR_F m_textColor   = D2D1::ColorF(0x111111);
-		D2D1_COLOR_F m_placeholderColor = D2D1::ColorF(0x9AA0A6);
+		D2D1_COLOR_F m_textColor   = vtheme::Current().ink;
+		D2D1_COLOR_F m_placeholderColor = vtheme::Current().dim;
 		D2D1_COLOR_F m_selectionFill    = D2D1::ColorF(0xB4D5FE);  // Office-blue selection
 
 		std::function<void(const std::wstring&)> m_onSubmit;

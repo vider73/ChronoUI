@@ -27,11 +27,21 @@
 
 namespace ChronoUI {
 
+	// The theme's colours, in the names widget code uses (see VTheme in
+	// VirtualWidget.hpp; vtheme::SetDark(true) switches them all).
 	namespace vctl {
-		inline D2D1_COLOR_F Ink()   { return vd::Col(0x111827); }
-		inline D2D1_COLOR_F Muted() { return vd::Col(0x6B7280); }
-		inline D2D1_COLOR_F Track() { return vd::Col(0xE5E7EB); }
-		inline D2D1_COLOR_F Blue()  { return vd::Col(0x4A90E2); }
+		inline D2D1_COLOR_F Ink()         { return vtheme::Current().ink; }
+		inline D2D1_COLOR_F Muted()       { return vtheme::Current().muted; }
+		inline D2D1_COLOR_F Dim()         { return vtheme::Current().dim; }          // disabled text, out-of-month days
+		inline D2D1_COLOR_F Track()       { return vtheme::Current().track; }        // rails behind knobs and pills
+		inline D2D1_COLOR_F Blue()        { return vtheme::Current().accent; }
+		inline D2D1_COLOR_F AccentHover() { return vtheme::Current().accentHover; }
+		inline D2D1_COLOR_F Surface()     { return vtheme::Current().surface; }      // cards, panels, fields
+		inline D2D1_COLOR_F Subtle()      { return vtheme::Current().subtle; }       // a fill a shade off the surface
+		inline D2D1_COLOR_F Border()      { return vtheme::Current().border; }       // hairlines and card edges
+		inline D2D1_COLOR_F Outline()     { return vtheme::Current().outline; }      // the border of a field or a button
+		inline D2D1_COLOR_F Pill()        { return vtheme::Current().pill; }         // tooltips and dark badges, white text
+		inline D2D1_COLOR_F Hover(float alpha) { return vtheme::Overlay(alpha); }    // the wash under the mouse
 	}
 
 	// -------------------------------------------------------------------------
@@ -66,7 +76,7 @@ namespace ChronoUI {
 		void OnDraw(ID2D1RenderTarget* rt) override {
 			const float w = 44.0f;
 			D2D1_RECT_F track = vd::Rect(m_bounds.left, vd::CY(m_bounds) - 12.0f, w, 24.0f);
-			vd::Fill(rt, track, vd::Mix(vd::Col(0xD1D5DB), m_accent, m_anim), 12.0f);
+			vd::Fill(rt, track, vd::Mix(vctl::Outline(), m_accent, m_anim), 12.0f);
 			if (m_focused) vd::Stroke(rt, vd::Inset(track, -2.0f, -2.0f), vd::Alpha(m_accent, 0.5f), 14.0f, 1.5f);
 			float kx = track.left + 12.0f + (w - 24.0f) * m_anim;
 			vd::Shadow(rt, vd::Rect(kx - 9.0f, vd::CY(track) - 9.0f, 18.0f, 18.0f), 9.0f, 0.12f, 2);
@@ -109,8 +119,8 @@ namespace ChronoUI {
 		}
 		void OnDraw(ID2D1RenderTarget* rt) override {
 			D2D1_RECT_F box = vd::Rect(m_bounds.left, vd::CY(m_bounds) - 9.0f, 18.0f, 18.0f);
-			vd::Fill(rt, box, vd::Mix(vd::Col(0xFFFFFF), m_accent, m_anim), 5.0f);
-			vd::Stroke(rt, box, (m_anim > 0.5f || m_hovered || m_focused) ? m_accent : vd::Col(0xD1D5DB), 5.0f, 1.5f);
+			vd::Fill(rt, box, vd::Mix(vctl::Surface(), m_accent, m_anim), 5.0f);
+			vd::Stroke(rt, box, (m_anim > 0.5f || m_hovered || m_focused) ? m_accent : vctl::Outline(), 5.0f, 1.5f);
 			if (m_anim > 0.05f) {
 				float s = vd::EaseOut(m_anim), cx = vd::CX(box), cy = vd::CY(box);
 				vd::Polyline(rt, { D2D1::Point2F(cx - 5.0f * s, cy + 0.5f * s), D2D1::Point2F(cx - 1.5f * s, cy + 4.0f * s),
@@ -168,8 +178,8 @@ namespace ChronoUI {
 				D2D1_RECT_F r = ItemRect(i);
 				float cx = r.left + 9.0f, cy = vd::CY(r);
 				bool on = i == m_sel;
-				vd::Circle(rt, cx, cy, 9.0f, vd::Col(0xFFFFFF));
-				vd::Ring(rt, cx, cy, 8.5f, (on || i == m_hover) ? m_accent : vd::Col(0xD1D5DB), on ? 2.0f : 1.5f);
+				vd::Circle(rt, cx, cy, 9.0f, vctl::Surface());
+				vd::Ring(rt, cx, cy, 8.5f, (on || i == m_hover) ? m_accent : vctl::Outline(), on ? 2.0f : 1.5f);
 				if (on) vd::Circle(rt, cx, cy, 4.5f, m_accent);
 				vd::Text(rt, m_items[(size_t)i], D2D1::RectF(r.left + 26.0f, r.top, r.right, r.bottom), vctl::Ink(), vd::Style().Size(13));
 			}
@@ -222,7 +232,7 @@ namespace ChronoUI {
 			float w = vd::W(m_bounds) / (float)m_items.size();
 			D2D1_RECT_F pill = vd::Inset(vd::Rect(m_bounds.left + w * m_pos, m_bounds.top, w, vd::H(m_bounds)), 3.0f, 3.0f);
 			vd::Shadow(rt, pill, 7.0f, 0.10f, 2);
-			vd::Fill(rt, pill, vd::Col(0xFFFFFF), 7.0f);
+			vd::Fill(rt, pill, vctl::Surface(), 7.0f);
 			if (m_focused) vd::Stroke(rt, pill, vd::Alpha(vctl::Blue(), 0.6f), 7.0f, 1.5f);
 			for (size_t i = 0; i < m_items.size(); ++i) {
 				D2D1_RECT_F r = vd::Rect(m_bounds.left + w * (float)i, m_bounds.top, w, vd::H(m_bounds));
@@ -321,13 +331,13 @@ namespace ChronoUI {
 			return VInputResult::Handled;
 		}
 		void OnDraw(ID2D1RenderTarget* rt) override {
-			vd::Fill(rt, m_bounds, vd::Col(0xFFFFFF), 8.0f);
-			vd::Stroke(rt, m_bounds, m_focused ? m_accent : vd::Col(0xD1D5DB), 8.0f, 1.5f);
+			vd::Fill(rt, m_bounds, vctl::Surface(), 8.0f);
+			vd::Stroke(rt, m_bounds, m_focused ? m_accent : vctl::Outline(), 8.0f, 1.5f);
 			D2D1_RECT_F mi = Minus(), pl = Plus();
 			if (m_hover == -1) vd::Fill(rt, vd::Inset(mi, 3.0f, 3.0f), vctl::Track(), 6.0f);
 			if (m_hover == +1) vd::Fill(rt, vd::Inset(pl, 3.0f, 3.0f), vctl::Track(), 6.0f);
-			vd::Text(rt, L"\x2212", mi, m_v > m_min ? vctl::Ink() : vd::Col(0xD1D5DB), vd::Style().Size(16).Center());
-			vd::Text(rt, L"+", pl, m_v < m_max ? vctl::Ink() : vd::Col(0xD1D5DB), vd::Style().Size(16).Center());
+			vd::Text(rt, L"\x2212", mi, m_v > m_min ? vctl::Ink() : vctl::Outline(), vd::Style().Size(16).Center());
+			vd::Text(rt, L"+", pl, m_v < m_max ? vctl::Ink() : vctl::Outline(), vd::Style().Size(16).Center());
 			vd::Text(rt, std::to_wstring(m_v), D2D1::RectF(mi.right, m_bounds.top, pl.left, m_bounds.bottom), vctl::Ink(), vd::Style().Size(14).Bold().Center());
 		}
 	};

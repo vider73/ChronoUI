@@ -8,6 +8,7 @@
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white)](#building)
 [![Direct2D](https://img.shields.io/badge/render-Direct2D%20%2B%20DirectWrite-8A2BE2)](#two-ways-to-build-a-screen)
 [![Dependencies](https://img.shields.io/badge/dependencies-none-success)](#building)
+[![build](https://github.com/vider73/ChronoUI/actions/workflows/build.yml/badge.svg)](https://github.com/vider73/ChronoUI/actions/workflows/build.yml)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **Clone it, build it, run it — with nothing but Visual Studio and the Windows SDK.**
@@ -59,7 +60,7 @@ Fourteen small programs, one `.cpp` each, header-only: they link nothing of ours
 | ![Settings](docs/screenshots/settings.gif) **Settings** — an app shell in the WinUI 3 vocabulary: navigation, tabs, expanders, info bar, menu, date picker, list, tree. | ![Bounce](docs/screenshots/bounce.gif) **Bounce** — a physics toy: gravity, collisions, throw a ball with the mouse. `OnUpdate(dt)` as a simulation step. |
 | ![Mail](docs/screenshots/mail.gif) **Mail** — three panes: folders with a badge, a searchable list with avatars, a command bar with overflow, a modal dialog before Delete. | ![Photos](docs/screenshots/photos.gif) **Photos** — a menu bar, a grid of painted pictures, search suggestions, a colour picker that tints, a split button, a teaching tip. |
 | ![VirtualShowcase](docs/screenshots/virtual-showcase.png) **VirtualShowcase** — the guided tour: custom chrome, streaming bubbles, tooltips, file drop, scroll-aware chrome. | ![Catalog](docs/screenshots/catalog.png) **Catalog** — the reference sheet: every widget in its resting state, one page per family. |
-| ![Booking](docs/screenshots/booking.png) **Booking** — a hotel stay on the v3 widgets: split view, calendar, number box, repeat buttons, flip view with pips, selector bar, pivot, rich text, a zoomable map in a scroll viewer. | |
+| ![Booking](docs/screenshots/booking.png) **Booking** — a hotel stay on the v3 widgets: split view, calendar, number box, repeat buttons, flip view with pips, selector bar, pivot, rich text, a zoomable map in a scroll viewer. | ![Booking, dark](docs/screenshots/booking-dark.png) **The same, dark** — every widget reads `VTheme` at draw time; `vtheme::SetDark(true)` and a repaint restyle the window. |
 
 ---
 
@@ -167,8 +168,7 @@ Pull requests are welcome, including ones written mostly by a model — that is 
 
 - **A new `cw.*` widget.** Self-contained, one file, no coordination needed.
 - **Tests for the parsers.** They are textual and easy to fuzz.
-- **A GitHub Actions workflow** that builds and uploads a zip on tag.
-- **A dark palette** for the virtual widgets.
+- **A second theme.** `VTheme` has light and dark; a high-contrast or a tinted one is a struct away.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the conventions and the traps worth knowing.
 

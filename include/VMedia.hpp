@@ -140,9 +140,9 @@ namespace ChronoUI {
 		void OnDraw(ID2D1RenderTarget* rt) override {
 			if (m_owner != rt) Load(rt);
 			if (!m_bmp) {
-				vd::Fill(rt, m_bounds, vd::Col(0xF3F4F6), m_radius);
-				vd::Stroke(rt, m_bounds, vd::Col(0xE5E7EB), m_radius, 1.0f);
-				vd::Text(rt, L"\xEB9F", m_bounds, vd::Col(0x9CA3AF), vd::Style().Icon().Size((std::min)(32.0f, vd::H(m_bounds) * 0.4f)).Center());
+				vd::Fill(rt, m_bounds, vctl::Subtle(), m_radius);
+				vd::Stroke(rt, m_bounds, vctl::Border(), m_radius, 1.0f);
+				vd::Text(rt, L"\xEB9F", m_bounds, vctl::Dim(), vd::Style().Icon().Size((std::min)(32.0f, vd::H(m_bounds) * 0.4f)).Center());
 				return;
 			}
 			ComPtr<ID2D1Layer> layer; ComPtr<ID2D1RoundedRectangleGeometry> geom;

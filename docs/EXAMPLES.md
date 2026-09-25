@@ -358,7 +358,8 @@ Or: *"Make the grid's tile size follow a VSlider in the toolbar."*
 **What it shows.** The reference sheet: Basics, Input, Status, Navigation,
 Collections, Text & media and Layout, every virtual widget in its resting
 state, ready to be clicked. The status line at the bottom says what each click
-did. A page number on the command line opens that page.
+did. A page number on the command line opens that page; `dark` after it starts
+in the dark theme, and the toggle at the top right switches live.
 
 ![Catalog, the Layout page](screenshots/catalog-layout.png)
 

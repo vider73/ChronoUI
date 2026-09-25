@@ -152,8 +152,8 @@ namespace ChronoUI {
 			return VInputResult::Handled;
 		}
 		void OnDraw(ID2D1RenderTarget* rt) override {
-			vd::Fill(rt, m_bounds, vd::Col(0xFFFFFF), 8.0f);
-			vd::Stroke(rt, m_bounds, vd::Col(0xE5E7EB), 8.0f, 1.0f);
+			vd::Fill(rt, m_bounds, vctl::Surface(), 8.0f);
+			vd::Stroke(rt, m_bounds, vctl::Border(), 8.0f, 1.0f);
 			rt->PushAxisAlignedClip(vd::Inset(m_bounds, 1.0f, 1.0f), D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
 			int first = (std::max)(0, (int)(m_scroll / m_rowH));
 			int lastV = (std::min)(Count() - 1, (int)((m_scroll + vd::H(m_bounds)) / m_rowH));
@@ -163,7 +163,7 @@ namespace ChronoUI {
 				bool sel = m_s.Is(i);
 				float cy = vd::CY(r);
 				if (sel)                 vd::Fill(rt, in, vd::Alpha(m_accent, 0.08f), 6.0f);
-				else if (i == m_hover)   vd::Fill(rt, in, vd::Col(0x000000, 0.04f), 6.0f);
+				else if (i == m_hover)   vd::Fill(rt, in, vctl::Hover(0.04f), 6.0f);
 				if (sel)                 vd::Fill(rt, vd::Rect(r.left + 4.0f, cy - 10.0f, 3.0f, 20.0f), m_accent, 1.5f);
 				if (m_focused && i == m_s.focus) vd::Stroke(rt, in, vd::Alpha(m_accent, 0.5f), 6.0f, 1.0f);
 				float tx = r.left + 20.0f;
@@ -187,7 +187,7 @@ namespace ChronoUI {
 			if (ms > 0.0f) {
 				float H = vd::H(m_bounds) - 8.0f, th = (std::max)(24.0f, H * H / (m_rowH * (float)Count()));
 				float ty = m_bounds.top + 4.0f + (H - th) * (m_scroll / ms);
-				vd::Fill(rt, vd::Rect(m_bounds.right - 7.0f, ty, 3.0f, th), vd::Col(0x000000, 0.22f), 1.5f);
+				vd::Fill(rt, vd::Rect(m_bounds.right - 7.0f, ty, 3.0f, th), vctl::Hover(0.22f), 1.5f);
 			}
 			rt->PopAxisAlignedClip();
 		}
@@ -290,8 +290,8 @@ namespace ChronoUI {
 			return VInputResult::Handled;
 		}
 		void OnDraw(ID2D1RenderTarget* rt) override {
-			vd::Fill(rt, m_bounds, vd::Col(0xFFFFFF), 8.0f);
-			vd::Stroke(rt, m_bounds, vd::Col(0xE5E7EB), 8.0f, 1.0f);
+			vd::Fill(rt, m_bounds, vctl::Surface(), 8.0f);
+			vd::Stroke(rt, m_bounds, vctl::Border(), 8.0f, 1.0f);
 			rt->PushAxisAlignedClip(vd::Inset(m_bounds, 1.0f, 1.0f), D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
 			int first = (std::max)(0, (int)(m_scroll / kRow));
 			int lastV = (std::min)(Count() - 1, (int)((m_scroll + vd::H(m_bounds)) / kRow));
@@ -302,7 +302,7 @@ namespace ChronoUI {
 				bool sel = row.n == m_sel, branch = !n.kids.empty();
 				float cy = vd::CY(r), x = r.left + 10.0f + kIndent * (float)row.depth;
 				if (sel)               vd::Fill(rt, in, vd::Alpha(m_accent, 0.08f), 6.0f);
-				else if (i == m_hover) vd::Fill(rt, in, vd::Col(0x000000, 0.04f), 6.0f);
+				else if (i == m_hover) vd::Fill(rt, in, vctl::Hover(0.04f), 6.0f);
 				if (sel)               vd::Fill(rt, vd::Rect(r.left + 4.0f, cy - 8.0f, 3.0f, 16.0f), m_accent, 1.5f);
 				if (sel && m_focused)  vd::Stroke(rt, in, vd::Alpha(m_accent, 0.5f), 6.0f, 1.0f);
 				if (branch) vd::Chevron(rt, x + 11.0f, cy, -90.0f + 90.0f * n.anim, vctl::Muted(), 4.0f);
@@ -314,7 +314,7 @@ namespace ChronoUI {
 			if (ms > 0.0f) {
 				float H = vd::H(m_bounds) - 8.0f, th = (std::max)(24.0f, H * H / (kRow * (float)Count()));
 				float ty = m_bounds.top + 4.0f + (H - th) * (m_scroll / ms);
-				vd::Fill(rt, vd::Rect(m_bounds.right - 7.0f, ty, 3.0f, th), vd::Col(0x000000, 0.22f), 1.5f);
+				vd::Fill(rt, vd::Rect(m_bounds.right - 7.0f, ty, 3.0f, th), vctl::Hover(0.22f), 1.5f);
 			}
 			rt->PopAxisAlignedClip();
 		}
@@ -421,7 +421,7 @@ namespace ChronoUI {
 				if (r.bottom < m_bounds.top || r.top > m_bounds.bottom) continue;
 				bool sel = m_s.Is(i), hov = i == m_hover;
 				if (hov && !sel) vd::Shadow(rt, r, 8.0f, 0.12f, 3);
-				vd::Fill(rt, r, vd::Col(0xFFFFFF), 8.0f);
+				vd::Fill(rt, r, vctl::Surface(), 8.0f);
 				D2D1_RECT_F pic = D2D1::RectF(r.left, r.top, r.right, r.top + m_th);
 				if (m_paint) {
 					rt->PushAxisAlignedClip(vd::Inset(pic, 1.0f, 1.0f), D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
@@ -433,7 +433,7 @@ namespace ChronoUI {
 					vd::Text(rt, t.title,   D2D1::RectF(r.left + 10.0f, pic.bottom + 6.0f,  r.right - 10.0f, pic.bottom + 24.0f), vctl::Ink(),   vd::Style().Size(12).Bold());
 					vd::Text(rt, t.caption, D2D1::RectF(r.left + 10.0f, pic.bottom + 24.0f, r.right - 10.0f, pic.bottom + 40.0f), vctl::Muted(), vd::Style().Size(11));
 				}
-				vd::Stroke(rt, r, sel ? m_accent : vd::Col(0xE5E7EB), 8.0f, sel ? 2.0f : 1.0f);
+				vd::Stroke(rt, r, sel ? m_accent : vctl::Border(), 8.0f, sel ? 2.0f : 1.0f);
 				if (m_focused && i == m_s.focus && !sel) vd::Stroke(rt, r, vd::Alpha(m_accent, 0.5f), 8.0f, 1.0f);
 				if (sel) {
 					vd::Circle(rt, r.right - 16.0f, r.top + 16.0f, 11.0f, m_accent);
@@ -444,7 +444,7 @@ namespace ChronoUI {
 			if (ms > 0.0f) {
 				float H = vd::H(m_bounds) - 8.0f, th = (std::max)(24.0f, H * H / (ms + vd::H(m_bounds)));
 				float ty = m_bounds.top + 4.0f + (H - th) * (m_scroll / ms);
-				vd::Fill(rt, vd::Rect(m_bounds.right - 7.0f, ty, 3.0f, th), vd::Col(0x000000, 0.22f), 1.5f);
+				vd::Fill(rt, vd::Rect(m_bounds.right - 7.0f, ty, 3.0f, th), vctl::Hover(0.22f), 1.5f);
 			}
 			rt->PopAxisAlignedClip();
 		}
@@ -575,13 +575,13 @@ namespace ChronoUI {
 			for (int i = 0; i < m_count; ++i) {
 				D2D1_POINT_2F d = Dot(i);
 				bool on = i == m_sel;
-				vd::Circle(rt, d.x, d.y, on ? 4.5f : (i == m_hover ? 3.5f : 2.5f), on ? m_accent : (i == m_hover ? vctl::Muted() : vd::Col(0xC4C9D2)));
+				vd::Circle(rt, d.x, d.y, on ? 4.5f : (i == m_hover ? 3.5f : 2.5f), on ? m_accent : (i == m_hover ? vctl::Muted() : vctl::Outline()));
 			}
 			if (m_arrows) for (int dir = -1; dir <= 1; dir += 2) {
 				D2D1_RECT_F a = Arrow(dir);
 				bool can = dir < 0 ? m_sel > 0 : m_sel < m_count - 1, lit = m_hover == (dir < 0 ? -2 : -3);
-				if (lit && can) vd::Fill(rt, a, vd::Col(0x000000, 0.06f), 10.0f);
-				vd::Chevron(rt, vd::CX(a), vd::CY(a), m_vertical ? (dir < 0 ? 180.0f : 0.0f) : (dir < 0 ? 90.0f : -90.0f), can ? vctl::Ink() : vd::Col(0xD1D5DB), 4.0f);
+				if (lit && can) vd::Fill(rt, a, vctl::Hover(0.06f), 10.0f);
+				vd::Chevron(rt, vd::CX(a), vd::CY(a), m_vertical ? (dir < 0 ? 180.0f : 0.0f) : (dir < 0 ? 90.0f : -90.0f), can ? vctl::Ink() : vctl::Outline(), 4.0f);
 			}
 			if (m_focused) { D2D1_POINT_2F d = Dot(m_sel); vd::Ring(rt, d.x, d.y, 8.0f, vd::Alpha(m_accent, 0.5f), 1.0f); }
 		}
@@ -649,20 +649,20 @@ namespace ChronoUI {
 		}
 		void OnDraw(ID2D1RenderTarget* rt) override {
 			float rx = RailX();
-			vd::Fill(rt, vd::Rect(rx - kRail * 0.5f, m_bounds.top + kPad, kRail, RailH()), vd::Col(0xE5E7EB), kRail * 0.5f);
+			vd::Fill(rt, vd::Rect(rx - kRail * 0.5f, m_bounds.top + kPad, kRail, RailH()), vctl::Border(), kRail * 0.5f);
 			for (const Label& l : m_labels) {
 				float y = YOf(l.at);
-				vd::Line(rt, rx - 10.0f, y, rx - 5.0f, y, vd::Col(0x9CA3AF), 1.0f);
+				vd::Line(rt, rx - 10.0f, y, rx - 5.0f, y, vctl::Dim(), 1.0f);
 				vd::Text(rt, l.text, D2D1::RectF(m_bounds.left, y - 9.0f, rx - 14.0f, y + 9.0f), vctl::Muted(), vd::Style().Size(11).Right());
 			}
 			D2D1_RECT_F t = Thumb();
-			vd::Fill(rt, t, (m_drag || m_hover || m_focused) ? m_accent : vd::Col(0x9CA3AF), kRail * 0.5f);
+			vd::Fill(rt, t, (m_drag || m_hover || m_focused) ? m_accent : vctl::Dim(), kRail * 0.5f);
 			if (m_drag) {
 				const Label* l = Nearest(m_v + m_thumb * 0.5f);
 				std::wstring s = l ? l->text : vd::Num(m_v * 100.0) + L"%";
 				float w = vd::TextWidth(s, vd::Style().Size(12).Bold()) + 20.0f;
 				D2D1_RECT_F pill = vd::Rect(rx - 18.0f - w, vd::CY(t) - 13.0f, w, 26.0f);
-				vd::Fill(rt, pill, vd::Col(0x1F2937, 0.95f), 6.0f);
+				vd::Fill(rt, pill, vd::Alpha(vctl::Pill(), 0.95f), 6.0f);
 				vd::Text(rt, s, pill, vd::Col(0xFFFFFF), vd::Style().Size(12).Bold().Center());
 			}
 		}

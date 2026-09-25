@@ -104,6 +104,28 @@ The other examples in [EXAMPLES.md](EXAMPLES.md) each isolate one idea:
 animated panels (Dashboard), capture and drag (Kanban), form controls
 (Controls), drawing and a lightbox (Gallery), simulation (Bounce).
 
+### Theme: light and dark
+
+Every virtual widget paints with the palette in `VTheme` (`VirtualWidget.hpp`),
+read at draw time through `vtheme::Current()` and the `vctl::` shorthands
+(`Ink`, `Muted`, `Dim`, `Surface`, `Subtle`, `Border`, `Outline`, `Track`,
+`Blue`, `Pill`, `Hover(alpha)`). `vtheme::SetDark(true)` and a repaint restyle
+a whole window; an app sets its background from the same place:
+
+```cpp
+vtheme::SetDark(true);
+win.SetBackground(vtheme::Current().window);
+```
+
+A widget given an explicit colour (`VLabel::Color`, `VButton::Face`...) keeps
+it in both themes; a `VLabel` with no colour, or `Muted(true)`, follows the
+theme. The accent is the same blue in both. `VCombo` and `VChatInput` take
+their defaults from the theme current when they are created. The Catalog and
+Booking examples have a Dark toggle at the top right and accept `dark` on the
+command line.
+
+![Catalog, dark](screenshots/catalog-dark.png)
+
 ### Drawing: `VDraw.hpp`
 
 `namespace vd` holds what an `OnDraw` reaches for: `Col`/`Mix`/`Alpha` for
