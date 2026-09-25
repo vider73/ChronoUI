@@ -11,6 +11,9 @@
 //   VDatePicker  a date button that opens a calendar flyout
 //   VTimePicker  a time button that opens an hour / minute grid
 //   VTeachingTip a callout with a beak, a title, a body and an action
+//   VSelectorBar a row of glyph + label choices with a sliding underline
+//   VPivot       the same in large type: section headers over swapped content
+//   VCalendarView an inline month: pick a day; the header zooms out to months
 //
 // Same shape as VControls.hpp: chainable setters, OnChange-style callbacks,
 // animation off OnUpdate(dt) with vd::Approach. Widgets that change their own
@@ -874,6 +877,193 @@ namespace ChronoUI {
 		void Show(const D2D1_RECT_F& anchor)  { Open(anchor); }
 		void OnClose(std::function<void()> cb)  { m_close = std::move(cb); }
 		void OnAction(std::function<void()> cb) { m_act = std::move(cb); }
+	};
+
+	// -------------------------------------------------------------------------
+	class VSelectorBar : public VirtualWidgetImpl {
+	public:
+		struct Item { std::wstring glyph, label; };
+	protected:
+		std::vector<Item> m_items;
+		int   m_sel = 0, m_hover = -1;
+		float m_size = 13.0f, m_pad = 14.0f, m_ux = -1.0f, m_uw = 0.0f;
+		D2D1_COLOR_F m_accent = vctl::Blue();
+		std::function<void(int)> m_cb;
+		vd::Style St(bool lit) const { return lit ? vd::Style().Size(m_size).Bold() : vd::Style().Size(m_size); }
+		float ItemW(int i) const { const Item& it = m_items[(size_t)i]; return (it.glyph.empty() ? 0.0f : m_size + 10.0f) + vd::TextWidth(it.label, St(true)) + 2.0f * m_pad; }
+		D2D1_RECT_F ItemRect(int i) const {
+			float x = m_bounds.left;
+			for (int k = 0; k < i; ++k) x += ItemW(k);
+			return vd::Rect(x, m_bounds.top, ItemW(i), vd::H(m_bounds));
+		}
+		int ItemAt(float x, float y) const { for (int i = 0; i < (int)m_items.size(); ++i) if (vd::Contains(ItemRect(i), x, y)) return i; return -1; }
+		void Pick(int i) { if (i == m_sel) return; m_sel = i; if (m_cb) m_cb(i); }
+	public:
+		explicit VSelectorBar(std::vector<Item> items) : m_items(std::move(items)) {}
+		const char* GetTypeName() const override { return "VSelectorBar"; }
+		bool CanFocus() const override { return true; }
+		VSelectorBar& Select(int i)          { m_sel = i; return *this; }
+		VSelectorBar& FontSize(float px)     { m_size = px; return *this; }
+		VSelectorBar& Accent(D2D1_COLOR_F c) { m_accent = c; return *this; }
+		int  Value() const { return m_sel; }
+		int  Count() const { return (int)m_items.size(); }
+		const std::wstring& Label(int i) const { return m_items[(size_t)i].label; }
+		void OnChange(std::function<void(int)> cb) { m_cb = std::move(cb); }
+
+		bool OnUpdate(float dt) override {
+			D2D1_RECT_F r = ItemRect(m_sel);
+			float tx = r.left, tw = vd::W(r);
+			if (m_ux < 0.0f) { m_ux = tx; m_uw = tw; }
+			if (fabsf(m_ux - tx) < 0.3f && fabsf(m_uw - tw) < 0.3f) { m_ux = tx; m_uw = tw; return false; }
+			m_ux = vd::Approach(m_ux, tx, dt, 18.0f); m_uw = vd::Approach(m_uw, tw, dt, 18.0f);
+			return true;
+		}
+		VInputResult OnMouseMove(float x, float y) override { int h = ItemAt(x, y); if (h == m_hover) return VInputResult::NotHandled; m_hover = h; return VInputResult::Handled; }
+		VInputResult OnMouseLeave() override { m_hover = -1; return VInputResult::Handled; }
+		VInputResult OnMouseUp(float x, float y, int btn) override {
+			int i = ItemAt(x, y);
+			if (btn != 1 || i < 0) return VInputResult::NotHandled;
+			Pick(i); return VInputResult::Handled;
+		}
+		VInputResult OnKeyDown(UINT vk) override {
+			int d = vk == VK_RIGHT ? 1 : (vk == VK_LEFT ? -1 : 0);
+			if (!d || m_items.empty()) return VInputResult::NotHandled;
+			Pick((m_sel + d + Count()) % Count()); return VInputResult::Handled;
+		}
+		void OnDraw(ID2D1RenderTarget* rt) override {
+			for (int i = 0; i < Count(); ++i) {
+				D2D1_RECT_F r = ItemRect(i);
+				bool lit = i == m_sel;
+				if (i == m_hover && !lit) vd::Fill(rt, vd::Inset(r, 2.0f, 4.0f), vd::Col(0x000000, 0.04f), 6.0f);
+				D2D1_COLOR_F ink = lit ? vctl::Ink() : vctl::Muted();
+				float x = r.left + m_pad;
+				const Item& it = m_items[(size_t)i];
+				if (!it.glyph.empty()) { vd::Text(rt, it.glyph, vd::Rect(x, r.top, m_size + 4.0f, vd::H(r)), lit ? m_accent : ink, vd::Style().Icon().Size(m_size).Center()); x += m_size + 10.0f; }
+				vd::Text(rt, it.label, D2D1::RectF(x, r.top, r.right, r.bottom), ink, St(lit));
+			}
+			if (m_ux >= 0.0f) vd::Fill(rt, vd::Rect(m_ux + m_pad * 0.6f, m_bounds.bottom - 3.0f, m_uw - m_pad * 1.2f, 3.0f), m_accent, 1.5f);
+			if (m_focused) vd::Stroke(rt, vd::Inset(ItemRect(m_sel), 2.0f, 2.0f), vd::Alpha(m_accent, 0.5f), 6.0f, 1.0f);
+		}
+	};
+
+	// Pivot headers are the same strip in large type and no glyphs; the app
+	// swaps the content under it on OnChange.
+	class VPivot : public VSelectorBar {
+		static std::vector<Item> Wrap(const std::vector<std::wstring>& labels) { std::vector<Item> v; for (const auto& l : labels) v.push_back({ L"", l }); return v; }
+	public:
+		explicit VPivot(std::vector<std::wstring> headers) : VSelectorBar(Wrap(headers)) { m_size = 20.0f; m_pad = 12.0f; }
+		const char* GetTypeName() const override { return "VPivot"; }
+	};
+
+	// -------------------------------------------------------------------------
+	class VCalendarView : public VirtualWidgetImpl {
+		VDate m_v, m_view;
+		bool  m_months = false;                            // zoomed out to the 12 months of m_view.y
+		int   m_hover = -1, m_hoverNav = 0;
+		bool  m_hoverHead = false;
+		D2D1_COLOR_F m_accent = vctl::Blue();
+		std::function<void(VDate)> m_cb;
+		static constexpr float kHead = 40.0f, kDays = 22.0f;
+
+		float Cell() const  { return (std::min)(vd::W(m_bounds) / 7.0f, (vd::H(m_bounds) - kHead - kDays) / 6.0f); }
+		float GridX() const { return m_bounds.left + (vd::W(m_bounds) - Cell() * 7.0f) * 0.5f; }
+		D2D1_RECT_F CellRect(int i) const  { return vd::Rect(GridX() + Cell() * (float)(i % 7), m_bounds.top + kHead + kDays + Cell() * (float)(i / 7), Cell(), Cell()); }
+		D2D1_RECT_F MonthRect(int m) const { float w = vd::W(m_bounds) / 4.0f, h = (vd::H(m_bounds) - kHead) / 3.0f; return vd::Inset(vd::Rect(m_bounds.left + w * (float)(m % 4), m_bounds.top + kHead + h * (float)(m / 4), w, h), 4.0f, 4.0f); }
+		D2D1_RECT_F NavRect(int dir) const { return vd::Rect(dir < 0 ? m_bounds.right - 68.0f : m_bounds.right - 34.0f, m_bounds.top + 5.0f, 30.0f, 30.0f); }
+		D2D1_RECT_F HeadRect() const       { return vd::Rect(m_bounds.left + 4.0f, m_bounds.top + 5.0f, vd::W(m_bounds) - 80.0f, 30.0f); }
+		VDate CellDate(int i) const { int wd = vdate::Weekday(m_view.y, m_view.m, 1); return vdate::AddDays(VDate{ m_view.y, m_view.m, 1 }, i - wd); }
+		int HitCell(float x, float y) const {
+			if (m_months) { for (int m = 0; m < 12; ++m) if (vd::Contains(MonthRect(m), x, y)) return m; return -1; }
+			for (int i = 0; i < 42; ++i) if (vd::Contains(CellRect(i), x, y)) return i;
+			return -1;
+		}
+		void Shift(int d) {
+			if (m_months) { m_view.y += d; return; }
+			m_view.m += d;
+			if (m_view.m > 12) { m_view.m = 1; ++m_view.y; }
+			if (m_view.m < 1)  { m_view.m = 12; --m_view.y; }
+		}
+		void Set(VDate v, bool fire) { bool changed = !vdate::Same(v, m_v); m_v = v; m_view = { v.y, v.m, 1 }; if (fire && changed && m_cb) m_cb(v); }
+	public:
+		VCalendarView() { m_v = vdate::Today(); m_view = { m_v.y, m_v.m, 1 }; }
+		const char* GetTypeName() const override { return "VCalendarView"; }
+		bool CanFocus() const override { return true; }
+		VCalendarView& Set(VDate v)           { Set(v, false); return *this; }
+		VCalendarView& Accent(D2D1_COLOR_F c) { m_accent = c; return *this; }
+		VDate Value() const                   { return m_v; }
+		void OnChange(std::function<void(VDate)> cb) { m_cb = std::move(cb); }
+
+		VInputResult OnMouseMove(float x, float y) override {
+			int c = HitCell(x, y), nav = vd::Contains(NavRect(-1), x, y) ? -1 : (vd::Contains(NavRect(1), x, y) ? 1 : 0);
+			bool h = vd::Contains(HeadRect(), x, y);
+			if (c == m_hover && nav == m_hoverNav && h == m_hoverHead) return VInputResult::NotHandled;
+			m_hover = c; m_hoverNav = nav; m_hoverHead = h; return VInputResult::Handled;
+		}
+		VInputResult OnMouseLeave() override { m_hover = -1; m_hoverNav = 0; m_hoverHead = false; return VInputResult::Handled; }
+		VInputResult OnMouseUp(float x, float y, int btn) override {
+			if (btn != 1) return VInputResult::NotHandled;
+			if (vd::Contains(NavRect(-1), x, y)) Shift(-1);
+			else if (vd::Contains(NavRect(1), x, y)) Shift(+1);
+			else if (vd::Contains(HeadRect(), x, y)) m_months = !m_months;
+			else {
+				int c = HitCell(x, y); if (c < 0) return VInputResult::Handled;
+				if (m_months) { m_view.m = c + 1; m_months = false; }
+				else Set(CellDate(c), true);
+			}
+			return VInputResult::Handled;
+		}
+		VInputResult OnKeyDown(UINT vk) override {
+			switch (vk) {
+				case VK_LEFT:  Set(vdate::AddDays(m_v, -1), true); break;
+				case VK_RIGHT: Set(vdate::AddDays(m_v, +1), true); break;
+				case VK_UP:    Set(vdate::AddDays(m_v, -7), true); break;
+				case VK_DOWN:  Set(vdate::AddDays(m_v, +7), true); break;
+				case VK_PRIOR: Shift(-1); break;
+				case VK_NEXT:  Shift(+1); break;
+				case VK_HOME:  Set(vdate::Today(), true); break;
+				case VK_ESCAPE: if (!m_months) return VInputResult::NotHandled; m_months = false; break;
+				default: return VInputResult::NotHandled;
+			}
+			return VInputResult::Handled;
+		}
+		void OnDraw(ID2D1RenderTarget* rt) override {
+			vd::Fill(rt, m_bounds, vd::Col(0xFFFFFF), 8.0f);
+			vd::Stroke(rt, m_bounds, m_focused ? vd::Alpha(m_accent, 0.6f) : vd::Col(0xE5E7EB), 8.0f, 1.0f);
+			std::wstring head = m_months ? std::to_wstring(m_view.y) : std::wstring(vdate::MonthName(m_view.m)) + L" " + std::to_wstring(m_view.y);
+			D2D1_RECT_F hr = HeadRect();
+			if (m_hoverHead) vd::Fill(rt, vd::Rect(hr.left, hr.top, vd::TextWidth(head, vd::Style().Size(14).Bold()) + 24.0f, vd::H(hr)), vd::Col(0x000000, 0.05f), 6.0f);
+			vd::Text(rt, head, D2D1::RectF(hr.left + 12.0f, hr.top, hr.right, hr.bottom), vctl::Ink(), vd::Style().Size(14).Bold());
+			for (int dir = -1; dir <= 1; dir += 2) {
+				D2D1_RECT_F n = NavRect(dir);
+				if (m_hoverNav == dir) vd::Fill(rt, n, vd::Col(0x000000, 0.06f), 6.0f);
+				vd::Chevron(rt, vd::CX(n), vd::CY(n), dir < 0 ? 90.0f : -90.0f, vctl::Ink());
+			}
+			VDate today = vdate::Today();
+			if (m_months) {
+				for (int m = 0; m < 12; ++m) {
+					D2D1_RECT_F r = MonthRect(m);
+					bool sel = m_v.y == m_view.y && m_v.m == m + 1, now = today.y == m_view.y && today.m == m + 1;
+					if (sel)                vd::Fill(rt, r, m_accent, 8.0f);
+					else if (m == m_hover)  vd::Fill(rt, r, vd::Col(0x000000, 0.05f), 8.0f);
+					if (now && !sel)        vd::Stroke(rt, r, m_accent, 8.0f, 1.5f);
+					vd::Text(rt, std::wstring(vdate::MonthName(m + 1)).substr(0, 3), r, sel ? vd::Col(0xFFFFFF) : vctl::Ink(), vd::Style().Size(13).Center());
+				}
+				return;
+			}
+			float c = Cell();
+			for (int k = 0; k < 7; ++k)
+				vd::Text(rt, std::wstring(1, vdate::DayName(k)[0]), vd::Rect(GridX() + c * (float)k, m_bounds.top + kHead, c, kDays), vctl::Muted(), vd::Style().Size(11).Center());
+			float rad = (std::min)(15.0f, c * 0.42f);
+			for (int i = 0; i < 42; ++i) {
+				VDate d = CellDate(i);
+				D2D1_RECT_F r = CellRect(i);
+				bool sel = vdate::Same(d, m_v), inMonth = d.m == m_view.m;
+				if (sel)                   vd::Circle(rt, vd::CX(r), vd::CY(r), rad, m_accent);
+				else if (i == m_hover)     vd::Circle(rt, vd::CX(r), vd::CY(r), rad, vd::Col(0x000000, 0.06f));
+				if (!sel && vdate::Same(d, today)) vd::Ring(rt, vd::CX(r), vd::CY(r), rad, m_accent, 1.5f);
+				vd::Text(rt, std::to_wstring(d.d), r, sel ? vd::Col(0xFFFFFF) : (inMonth ? vctl::Ink() : vd::Col(0xB0B7C3)), vd::Style().Size(12).Center());
+			}
+		}
 	};
 
 } // namespace ChronoUI

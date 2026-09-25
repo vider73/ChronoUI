@@ -169,7 +169,7 @@ add_executable(Welcome WIN32
 # tour; the rest each teach one thing (see docs/EXAMPLES.md). Adding one = a
 # new .cpp here and a line in that list.
 set(CHRONOUI_VIRTUAL_EXAMPLES
-    VirtualHello VirtualShowcase Dashboard Kanban Controls Form Table Gallery Bounce Settings Mail Photos Catalog)
+    VirtualHello VirtualShowcase Dashboard Kanban Controls Form Table Gallery Bounce Settings Mail Photos Catalog Booking)
 foreach(_ex ${CHRONOUI_VIRTUAL_EXAMPLES})
     add_executable(${_ex} WIN32 src/examples/${_ex}.cpp)
     set_target_properties(${_ex} PROPERTIES FOLDER "Examples")
@@ -211,7 +211,7 @@ set_target_properties(Welcome PROPERTIES FOLDER "Examples")
 # current working directory at launch. Mirrors typical
 # game/native-app packaging.
 # ---------------------------------------------------------
-set(DEMO_TARGETS ChronoUIDemo HelloWorld Welcome VirtualHello)
+set(DEMO_TARGETS ChronoUIDemo HelloWorld Welcome VirtualHello Catalog Booking)
 
 # One staging target, not one post-build per demo: every demo lands in the
 # same folder as ChronoUI.dll, and N parallel copies of the same tree into the

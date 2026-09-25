@@ -8,7 +8,7 @@ short version of what a session needs to be productive in its first turn.
 **ChronoUI is a Win32 / Direct2D widget framework.** Two models: the virtual
 widgets, which are headers only (`include/V*.hpp`, no DLL to ship), and the
 older DLL model, `ChronoUI.dll` (a layout engine and a CSS parser in
-`src/core/`) plus 23 hot-pluggable widget DLLs in `src/widgets/`. Thirteen
+`src/core/`) plus 23 hot-pluggable widget DLLs in `src/widgets/`. Fourteen
 examples in `src/examples/`, all on the virtual model. It has **no external
 dependencies**: Visual Studio 2022 and the Windows SDK build everything. Keep
 it that way; a `find_package(... REQUIRED)` in the root `CMakeLists.txt` is a
@@ -25,7 +25,9 @@ and how it works), `docs/WIDGETS.md` (every widget in both models),
   capture, focus, Tab order, tooltips, scrolling, custom chrome and the 60 Hz
   heartbeat live in `VirtualWindow` (`include/VirtualWidget.hpp`). **This is the
   model to use.** `src/examples/VirtualShowcase.cpp` is the guided tour;
-  `src/examples/Catalog.cpp` shows every widget on five pages.
+  `src/examples/Catalog.cpp` shows every widget on seven pages (a page number
+  on its command line opens that page); `Booking.cpp` puts the layout,
+  calendar, flip view, pivot and scroll viewer widgets in one screen.
 - **DLL widgets** (`ChronoUI.hpp`, `WidgetImpl.hpp`, `src/widgets/cw.*.cpp`) —
   one HWND per widget, CSS classes, reactive `Bind`, a JSON manifest per widget.
   Only the older demos use it. It stays because the manifest + CSS story is what
@@ -44,6 +46,16 @@ and how it works), `docs/WIDGETS.md` (every widget in both models),
 - `VActions.hpp` — dropdown, command bar, menu bar, split button, toggle button,
   breadcrumb, suggestions, the modal dialog, link.
 - `VIndicators.hpp` — progress ring, rating, badge, person picture.
+- `VText.hpp` — number box (it evaluates expressions), password box, rich text.
+- `VMedia.hpp` — icon, animated icon, image (WIC), shapes.
+- `VLayout.hpp` — scroll viewer, split view, two-pane view. A container owns
+  its geometry and motion and exposes rects (`PaneRect`, `ContentRect`,
+  `Pane1Rect`...); the app places the children from them and the container
+  calls `OnLayout` while it animates. There is no parent-child tree.
+- Also in their families: `VRepeatButton`, `VToggleSplitButton`,
+  `VCommandBarFlyout` (VActions), `VFlipView`, `VPipsPager`,
+  `VAnnotatedScrollBar` (VCollections), `VSelectorBar`, `VPivot`,
+  `VCalendarView` (VNavigation).
 - `VDraw.hpp` — the `vd::` drawing helpers every `OnDraw` uses: fills, text,
   arcs, gradients, polylines, easing, icons (`Style().Icon()` = Segoe MDL2
   Assets glyphs).

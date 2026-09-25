@@ -10,6 +10,9 @@
 //   VSplitButton a button with a menu behind its chevron
 //   VToggleButton an on/off button for toolbars
 //   VSuggestions the list under a search box: arrows and Enter pick, the box keeps the caret
+//   VRepeatButton a button that fires again and again while held
+//   VToggleSplitButton a split button whose main part is on or off
+//   VCommandBarFlyout a floating row of commands with a "..." for the rest
 //
 // VDropDown and VCommandBar are VFlyoutButton s (see VNavigation.hpp): add
 // them with AddChrome, last, and give them the window size with Cover(w, h).
@@ -514,6 +517,7 @@ namespace ChronoUI {
 
 	// -------------------------------------------------------------------------
 	class VSplitButton : public VFlyoutButton {
+	protected:
 		std::wstring m_text;
 		std::vector<VMenuItem> m_items;
 		int  m_hover = -1;
@@ -523,7 +527,6 @@ namespace ChronoUI {
 		D2D1_RECT_F MainRect() const { return D2D1::RectF(m_bounds.left, m_bounds.top, m_bounds.right - 32.0f, m_bounds.bottom); }
 		D2D1_RECT_F ChevRect() const { return D2D1::RectF(m_bounds.right - 32.0f, m_bounds.top, m_bounds.right, m_bounds.bottom); }
 		void Pick(int i) { Close(); if (m_cb) m_cb(i); }
-	protected:
 		D2D1_RECT_F OpenerRect() const override { return ChevRect(); }
 		VInputResult ButtonUp(float x, float y, int btn) override {
 			if (btn != 1 || !vd::Contains(MainRect(), x, y)) return VInputResult::NotHandled;
@@ -657,6 +660,153 @@ namespace ChronoUI {
 			}
 		}
 		const std::wstring& At(int i) const { return m_items[(size_t)i]; }
+		void OnPick(std::function<void(int)> cb) { m_cb = std::move(cb); }
+	};
+
+	// -------------------------------------------------------------------------
+	// VRepeatButton — fires OnClick on the press, then again after Delay and
+	// every Interval while the button stays held (a volume "+", a scroll arrow).
+	// -------------------------------------------------------------------------
+	class VRepeatButton : public VButton {
+		float m_delay = 0.4f, m_interval = 0.06f, m_t = 0.0f;
+		bool  m_repeating = false;
+	public:
+		const char* GetTypeName() const override { return "VRepeatButton"; }
+		VRepeatButton& Delay(float s)    { m_delay = s; return *this; }
+		VRepeatButton& Interval(float s) { m_interval = s; return *this; }
+		bool OnUpdate(float dt) override {
+			if (!m_pressed) { m_repeating = false; return false; }
+			m_t += dt;
+			float due = m_repeating ? m_interval : m_delay;
+			if (m_t >= due) { m_t -= due; m_repeating = true; if (m_onClick && HitTest(m_lastX, m_lastY)) m_onClick(); }
+			return true;
+		}
+		VInputResult OnMouseDown(float x, float y, int btn) override {
+			VInputResult r = VButton::OnMouseDown(x, y, btn);
+			if (r == VInputResult::Capture) { m_t = 0.0f; m_repeating = false; m_lastX = x; m_lastY = y; if (m_onClick) m_onClick(); }
+			return r;
+		}
+		VInputResult OnMouseMove(float x, float y) override { m_lastX = x; m_lastY = y; return VInputResult::NotHandled; }
+		VInputResult OnMouseUp(float, float, int btn) override {           // the press already fired; the release only ends it
+			if (btn != 1) return VInputResult::NotHandled;
+			m_pressed = false; m_repeating = false; return VInputResult::Handled;
+		}
+		VInputResult OnKeyDown(UINT vk) override {                          // the keyboard's own autorepeat does the repeating
+			if (vk != VK_SPACE && vk != VK_RETURN) return VInputResult::NotHandled;
+			if (m_onClick) m_onClick(); return VInputResult::Handled;
+		}
+	private:
+		float m_lastX = 0.0f, m_lastY = 0.0f;
+	};
+
+	// -------------------------------------------------------------------------
+	class VToggleSplitButton : public VSplitButton {
+		bool m_on = false;
+		std::function<void(bool)> m_change;
+	protected:
+		VInputResult ButtonUp(float x, float y, int btn) override {
+			if (btn != 1 || !vd::Contains(MainRect(), x, y)) return VInputResult::NotHandled;
+			m_on = !m_on; if (m_change) m_change(m_on); if (m_onClick) m_onClick();
+			return VInputResult::Handled;
+		}
+		void DrawButton(ID2D1RenderTarget* rt) override {
+			D2D1_COLOR_F face = m_on ? (m_hovered ? vd::Col(0x3B7AC8) : m_accent) : (m_hovered ? vd::Col(0xE5E7EB) : vd::Col(0xF3F4F6));
+			D2D1_COLOR_F ink  = m_on ? vd::Col(0xFFFFFF) : vctl::Ink();
+			vd::Fill(rt, m_bounds, face, 6.0f);
+			if (!m_on) vd::Stroke(rt, m_bounds, vd::Col(0xD1D5DB), 6.0f, 1.0f);
+			if (m_focused && !m_open) vd::Stroke(rt, vd::Inset(m_bounds, -2.0f, -2.0f), vd::Alpha(m_accent, 0.6f), 8.0f, 1.5f);
+			vd::Text(rt, m_text, MainRect(), ink, vd::Style().Size(13).Bold().Center());
+			D2D1_RECT_F c = ChevRect();
+			vd::Line(rt, c.left, c.top + 8.0f, c.left, c.bottom - 8.0f, vd::Alpha(ink, 0.35f), 1.0f);
+			vd::Chevron(rt, vd::CX(c), vd::CY(c), m_open ? 180.0f : 0.0f, ink);
+		}
+	public:
+		explicit VToggleSplitButton(std::wstring text) : VSplitButton(std::move(text)) {}
+		const char* GetTypeName() const override { return "VToggleSplitButton"; }
+		VToggleSplitButton& Set(bool on) { m_on = on; return *this; }
+		bool Value() const { return m_on; }
+		void OnChange(std::function<void(bool)> cb) { m_change = std::move(cb); }
+		VInputResult OnKeyDown(UINT vk) override {
+			if (m_open) return VFlyout::OnKeyDown(vk);
+			if (vk == VK_RETURN || vk == VK_SPACE) { m_on = !m_on; if (m_change) m_change(m_on); if (m_onClick) m_onClick(); return VInputResult::Handled; }
+			if (vk == VK_DOWN) { Open(ChevRect()); return VInputResult::Handled; }
+			return VInputResult::NotHandled;
+		}
+	};
+
+	// -------------------------------------------------------------------------
+	// VCommandBarFlyout — the mini toolbar that pops up next to a selection: a
+	// row of glyph buttons, and a "..." that unfolds the secondary commands
+	// underneath. Show(anchor) opens it; OnPick gets the index in the order the
+	// commands were added (primaries first, then secondaries).
+	// -------------------------------------------------------------------------
+	class VCommandBarFlyout : public VFlyout {
+		std::vector<VMenuItem> m_primary, m_secondary;
+		bool m_expanded = false, m_hoverMore = false;
+		int  m_hover = -1, m_hoverRow = -1;
+		std::function<void(int)> m_cb;
+		static constexpr float kBtn = 40.0f, kRowH = 36.0f, kPad = 4.0f;
+		float BarW() const { return kPad * 2.0f + kBtn * (float)m_primary.size() + (m_secondary.empty() ? 0.0f : kBtn); }
+		D2D1_RECT_F BtnRect(const D2D1_RECT_F& p, int i) const { return vd::Rect(p.left + kPad + kBtn * (float)i, p.top + kPad, kBtn, kRowH); }
+		D2D1_RECT_F MoreRect(const D2D1_RECT_F& p) const { return vd::Rect(p.left + kPad + kBtn * (float)m_primary.size(), p.top + kPad, kBtn, kRowH); }
+		D2D1_RECT_F Rows(const D2D1_RECT_F& p) const { return D2D1::RectF(p.left, p.top + kPad + kRowH + 4.0f, p.right, p.bottom); }
+		int BtnAt(float x, float y) const { for (int i = 0; i < (int)m_primary.size(); ++i) if (vd::Contains(BtnRect(m_panel, i), x, y)) return i; return -1; }
+		void Measure() {
+			float w = BarW(), h = kPad * 2.0f + kRowH;
+			if (m_expanded) { float rw, rh; vmenu::Measure(m_secondary, 0, rw, rh); w = (std::max)(w, rw); h += 4.0f + rh; }
+			m_pw = w; m_ph = h;
+		}
+		void Pick(int i) { Close(); if (m_cb) m_cb(i); }
+	protected:
+		void OnOpened() override { m_expanded = false; m_hover = -1; m_hoverRow = -1; m_hoverMore = false; Measure(); Place(); }
+		VInputResult PanelMove(float x, float y) override {
+			int h = BtnAt(x, y), r = m_expanded ? vmenu::RowAt(Rows(m_panel), m_secondary, 0, x, y) : -1;
+			bool m = !m_secondary.empty() && vd::Contains(MoreRect(m_panel), x, y);
+			if (h == m_hover && r == m_hoverRow && m == m_hoverMore) return VInputResult::NotHandled;
+			m_hover = h; m_hoverRow = r; m_hoverMore = m; return VInputResult::Handled;
+		}
+		VInputResult PanelUp(float x, float y, int) override {
+			int i = BtnAt(x, y); if (i >= 0) { Pick(i); return VInputResult::Handled; }
+			if (!m_secondary.empty() && vd::Contains(MoreRect(m_panel), x, y)) { m_expanded = !m_expanded; Measure(); Place(); return VInputResult::Handled; }
+			if (m_expanded) { int r = vmenu::RowAt(Rows(m_panel), m_secondary, 0, x, y); if (r >= 0) Pick((int)m_primary.size() + r); }
+			return VInputResult::Handled;
+		}
+		VInputResult PanelKey(UINT vk) override {
+			int n = (int)m_primary.size();
+			if (vk == VK_LEFT || vk == VK_RIGHT) { if (n) m_hover = (m_hover + (vk == VK_RIGHT ? 1 : -1) + n) % n; return VInputResult::Handled; }
+			if (vk == VK_DOWN || vk == VK_UP) {
+				if (!m_expanded && !m_secondary.empty()) { m_expanded = true; Measure(); Place(); }
+				m_hoverRow = vmenu::Step(m_secondary, 0, m_hoverRow, vk == VK_DOWN ? 1 : -1); return VInputResult::Handled;
+			}
+			if (vk == VK_RETURN || vk == VK_SPACE) { if (m_hoverRow >= 0) Pick(n + m_hoverRow); else if (m_hover >= 0) Pick(m_hover); return VInputResult::Handled; }
+			return VInputResult::NotHandled;
+		}
+		void DrawPanel(ID2D1RenderTarget* rt, const D2D1_RECT_F& p) override {
+			for (int i = 0; i < (int)m_primary.size(); ++i) {
+				D2D1_RECT_F r = BtnRect(p, i);
+				if (i == m_hover) vd::Fill(rt, vd::Inset(r, 2.0f, 2.0f), vd::Col(0x000000, 0.06f), 6.0f);
+				vd::Text(rt, m_primary[(size_t)i].glyph, r, vctl::Ink(), vd::Style().Icon().Size(16).Center());
+			}
+			if (!m_secondary.empty()) {
+				D2D1_RECT_F m = MoreRect(p);
+				if (m_hoverMore || m_expanded) vd::Fill(rt, vd::Inset(m, 2.0f, 2.0f), vd::Col(0x000000, 0.06f), 6.0f);
+				vd::Text(rt, L"\xE712", m, vctl::Ink(), vd::Style().Icon().Size(16).Center());
+			}
+			if (m_expanded) {
+				D2D1_RECT_F rows = Rows(p);
+				vd::Line(rt, p.left + 8.0f, rows.top - 2.0f, p.right - 8.0f, rows.top - 2.0f, vd::Col(0xE5E7EB), 1.0f);
+				vmenu::Draw(rt, rows, m_secondary, 0, m_hoverRow);
+			}
+		}
+	public:
+		const char* GetTypeName() const override { return "VCommandBarFlyout"; }
+		VCommandBarFlyout& Add(std::wstring glyph, std::wstring label) { VMenuItem it; it.glyph = std::move(glyph); it.label = std::move(label); m_primary.push_back(std::move(it)); return *this; }
+		VCommandBarFlyout& AddSecondary(std::wstring label, std::wstring glyph = L"", std::wstring shortcut = L"") {
+			VMenuItem it; it.label = std::move(label); it.glyph = std::move(glyph); it.shortcut = std::move(shortcut); m_secondary.push_back(std::move(it)); return *this;
+		}
+		VCommandBarFlyout& Separator() { VMenuItem it; it.separator = true; m_secondary.push_back(std::move(it)); return *this; }
+		const VMenuItem& At(int i) const { return i < (int)m_primary.size() ? m_primary[(size_t)i] : m_secondary[(size_t)(i - (int)m_primary.size())]; }
+		void Show(const D2D1_RECT_F& anchor) { Open(anchor); }
 		void OnPick(std::function<void(int)> cb) { m_cb = std::move(cb); }
 	};
 

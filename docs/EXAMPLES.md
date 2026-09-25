@@ -1,6 +1,6 @@
 # ChronoUI — Examples
 
-Thirteen small programs, each a single `.cpp` and nothing else: the virtual
+Fourteen small programs, each a single `.cpp` and nothing else: the virtual
 widgets are headers, so no DLL of ours sits next to the exe. They are meant to be read as much as run: every one teaches a
 handful of framework mechanisms and stays short enough to hold in your head,
 which is also what makes them good raw material for a language model. Each
@@ -22,7 +22,8 @@ with `--target Dashboard`. The executables land in `build/Release/`.
 | [Settings](#settings--an-app-shell-in-the-winui-3-vocabulary) | Navigation, tabs, expanders, info bar, menu, date picker, list, tree | ~330 |
 | [Mail](#mail--three-panes-a-command-bar-and-a-dialog) | Folders, a message list, a command bar with overflow, a modal dialog | ~300 |
 | [Photos](#photos--a-menu-bar-a-grid-of-painted-pictures-a-colour-picker) | Menu bar, painted grid, search suggestions, colour picker, split button | ~300 |
-| [Catalog](#catalog--every-widget-one-page-per-family) | The reference sheet: every widget on five pages | ~290 |
+| [Catalog](#catalog--every-widget-one-page-per-family) | The reference sheet: every widget on seven pages | ~350 |
+| [Booking](#booking--a-hotel-stay-on-the-v3-widgets) | Split view, calendar, number box, flip view, pivot, rich text, a zoomable scroll viewer | ~330 |
 | VirtualHello | The smallest possible app: a label and a button | 60 |
 
 Two things all of them share. **`VirtualWindow`** owns the single HWND and
@@ -354,9 +355,12 @@ Or: *"Make the grid's tile size follow a VSlider in the toolbar."*
 
 ![Catalog](screenshots/catalog.png)
 
-**What it shows.** The reference sheet: Basics, Input, Status, Navigation and
-Collections, every virtual widget in its resting state, ready to be clicked.
-The status line at the bottom says what each click did.
+**What it shows.** The reference sheet: Basics, Input, Status, Navigation,
+Collections, Text & media and Layout, every virtual widget in its resting
+state, ready to be clicked. The status line at the bottom says what each click
+did. A page number on the command line opens that page.
+
+![Catalog, the Layout page](screenshots/catalog-layout.png)
 
 **How it works.**
 - A page is a list of cells, a caption above one or more widgets; `layout()`
@@ -367,6 +371,45 @@ The status line at the bottom says what each click did.
   them from the same place.
 - Open it after changing a header: if it looks right here, it looks right in
   the other examples.
+
+---
+
+## Booking — a hotel stay on the v3 widgets
+
+![Booking](screenshots/booking.png)
+
+**What it shows.** The nineteen widgets of the third round in one screen that
+means something: booking a hotel. The filters live in a `VSplitView` pane (a
+`VCalendarView` for the check-in date, a `VNumberBox` for the guests, two
+`VRepeatButton`s for the nights, a toggle for breakfast, a slider for the
+budget); the content is a `VTwoPaneView`: the gallery on one side (a
+`VSelectorBar` of room types over a `VFlipView` with a `VPipsPager`, a
+`VShape` price tag, a `VCommandBarFlyout` behind the share icon) and the
+details on the other (a `VPivot` over a `VRichText` overview, a scrolling list
+of reviews and a zoomable map, both painted into one `VScrollViewer`). A
+`VToggleSplitButton` for notifications, a `VAnimatedIcon` heart, `VIcon`s for
+the amenities, a `VInfoBar` that appears when the stay goes over budget, and a
+`VDialog` to book.
+
+**How it works.**
+- Containers do not own children in the virtual model. `VSplitView` and
+  `VTwoPaneView` own the geometry and the motion and expose `PaneRect()` /
+  `ContentRect()` and `Pane1Rect()` / `Pane2Rect()`; the app's one `layout()`
+  places everything from those rects, and both containers call it back through
+  `OnLayout` while the pane slides or the divider is dragged.
+- The compact pane: while `PaneOpen()` is false the filters are hidden and a
+  column of `VIcon`s stands in for them, WinUI's CompactInline mode.
+- The pivot swaps painters: Overview shows the `VRichText`; Reviews and Map
+  hand the same `VScrollViewer` a different `Paint` callback and content size.
+  The map is zoomable with Ctrl+wheel, the reviews are not.
+- `recompute()` is the one place the bill is worked out. Every control's
+  `OnChange` calls it; it opens or closes the info bar, and the bar reports its
+  animated height through `OnLayout`.
+
+**Prompts that work.** "Add a Suite-only 'Late checkout' toggle to the pane
+and charge 30 € for it" · "Give the map a second pin for the beach and centre
+on it when the pivot opens" · "Replace the reviews painter with a `VListView`
+of the same data" · "Ask for a `VPasswordBox` before the booking dialog".
 
 ---
 

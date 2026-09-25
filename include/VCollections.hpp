@@ -8,6 +8,11 @@
 //               lives in the node, arrows walk and fold the tree
 //   VGridView   tiles painted by a callback, with captions and the same
 //               selection gestures as the list
+//   VFlipView   one item at a time, painted by a callback; arrows at the
+//               edges, keys and wheel flip, the pages slide
+//   VPipsPager  the dots under a flip view: one per page, the current one lit
+//   VAnnotatedScrollBar  a tall scrollbar with labels along it (months, letters)
+//               and a tooltip while dragging; drives any scrolling widget
 //
 // Both paint only the rows inside their bounds, so cost follows what is
 // visible, not the size of the data. Same conventions as VControls.hpp.
@@ -442,6 +447,224 @@ namespace ChronoUI {
 				vd::Fill(rt, vd::Rect(m_bounds.right - 7.0f, ty, 3.0f, th), vd::Col(0x000000, 0.22f), 1.5f);
 			}
 			rt->PopAxisAlignedClip();
+		}
+	};
+
+	// -------------------------------------------------------------------------
+	class VFlipView : public VirtualWidgetImpl {
+	public:
+		using Painter = std::function<void(ID2D1RenderTarget*, const D2D1_RECT_F&, int)>;   // paints page i inside the rect
+	private:
+		int     m_count = 0, m_sel = 0, m_hover = 0;    // hover: -1 previous arrow, +1 next arrow
+		float   m_pos = 0.0f;                           // the page currently shown, fractional while sliding
+		bool    m_vertical = false;
+		Painter m_paint;
+		std::function<void(int)> m_cb;
+		static constexpr float kArrow = 36.0f;
+		D2D1_RECT_F ArrowRect(int dir) const {
+			if (m_vertical) return vd::Rect(vd::CX(m_bounds) - kArrow * 0.5f, dir < 0 ? m_bounds.top + 6.0f : m_bounds.bottom - kArrow - 6.0f, kArrow, kArrow);
+			return vd::Rect(dir < 0 ? m_bounds.left + 6.0f : m_bounds.right - kArrow - 6.0f, vd::CY(m_bounds) - kArrow * 0.5f, kArrow, kArrow);
+		}
+		bool CanGo(int dir) const { return dir < 0 ? m_sel > 0 : m_sel < m_count - 1; }
+		void Go(int i) { i = (std::max)(0, (std::min)(m_count - 1, i)); if (i == m_sel) return; m_sel = i; if (m_cb) m_cb(i); }
+	public:
+		const char* GetTypeName() const override { return "VFlipView"; }
+		bool CanFocus() const override { return true; }
+		VFlipView& Count(int n)        { m_count = n; m_sel = (std::min)(m_sel, (std::max)(0, n - 1)); m_pos = (float)m_sel; return *this; }
+		VFlipView& Paint(Painter p)    { m_paint = std::move(p); return *this; }
+		VFlipView& Vertical(bool v)    { m_vertical = v; return *this; }
+		VFlipView& Select(int i)       { Go(i); return *this; }                 // slides there; Count() sets the start page
+		int  Value() const { return m_sel; }
+		int  Size() const  { return m_count; }
+		void Next()        { Go(m_sel + 1); }
+		void Previous()    { Go(m_sel - 1); }
+		void OnChange(std::function<void(int)> cb) { m_cb = std::move(cb); }
+
+		bool OnUpdate(float dt) override {
+			if (fabsf(m_pos - (float)m_sel) < 0.002f) { m_pos = (float)m_sel; return false; }
+			m_pos = vd::Approach(m_pos, (float)m_sel, dt, 14.0f);
+			return true;
+		}
+		VInputResult OnMouseEnter() override { m_hovered = true;  return VInputResult::Handled; }
+		VInputResult OnMouseLeave() override { m_hovered = false; m_hover = 0; return VInputResult::Handled; }
+		VInputResult OnMouseMove(float x, float y) override {
+			int h = vd::Contains(ArrowRect(-1), x, y) ? -1 : (vd::Contains(ArrowRect(1), x, y) ? 1 : 0);
+			if (h == m_hover) return VInputResult::NotHandled;
+			m_hover = h; return VInputResult::Handled;
+		}
+		VInputResult OnMouseUp(float x, float y, int btn) override {
+			if (btn != 1) return VInputResult::NotHandled;
+			if (vd::Contains(ArrowRect(-1), x, y)) Previous(); else if (vd::Contains(ArrowRect(1), x, y)) Next();
+			return VInputResult::Handled;
+		}
+		VInputResult OnMouseWheel(float delta, float, float) override { if (delta > 0) Previous(); else Next(); return VInputResult::Handled; }
+		VInputResult OnKeyDown(UINT vk) override {
+			bool prev = m_vertical ? vk == VK_UP : vk == VK_LEFT, next = m_vertical ? vk == VK_DOWN : vk == VK_RIGHT;
+			if (prev) Previous(); else if (next) Next(); else if (vk == VK_HOME) Go(0); else if (vk == VK_END) Go(m_count - 1); else return VInputResult::NotHandled;
+			return VInputResult::Handled;
+		}
+		void OnDraw(ID2D1RenderTarget* rt) override {
+			vd::Fill(rt, m_bounds, vd::Col(0x111827), 8.0f);
+			rt->PushAxisAlignedClip(m_bounds, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+			if (m_paint && m_count > 0) {
+				float W = vd::W(m_bounds), H = vd::H(m_bounds);
+				int first = (int)floorf(m_pos), last = (int)ceilf(m_pos);
+				for (int i = first; i <= last && i < m_count; ++i) {
+					float off = ((float)i - m_pos) * (m_vertical ? H : W);
+					D2D1_RECT_F r = m_vertical ? vd::Rect(m_bounds.left, m_bounds.top + off, W, H) : vd::Rect(m_bounds.left + off, m_bounds.top, W, H);
+					rt->PushAxisAlignedClip(r, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+					m_paint(rt, r, i);
+					rt->PopAxisAlignedClip();
+				}
+			}
+			for (int dir = -1; dir <= 1; dir += 2) {
+				if (!CanGo(dir) || !(m_hovered || m_focused)) continue;
+				D2D1_RECT_F a = ArrowRect(dir);
+				vd::Fill(rt, a, vd::Col(0x000000, m_hover == dir ? 0.55f : 0.35f), kArrow * 0.5f);
+				vd::Chevron(rt, vd::CX(a), vd::CY(a), m_vertical ? (dir < 0 ? 180.0f : 0.0f) : (dir < 0 ? 90.0f : -90.0f), vd::Col(0xFFFFFF), 5.0f, 1.8f);
+			}
+			if (m_focused) vd::Stroke(rt, vd::Inset(m_bounds, 1.5f, 1.5f), vd::Alpha(vctl::Blue(), 0.7f), 7.0f, 1.5f);
+			rt->PopAxisAlignedClip();
+		}
+	};
+
+	// -------------------------------------------------------------------------
+	class VPipsPager : public VirtualWidgetImpl {
+		int  m_count = 0, m_sel = 0, m_hover = -1;
+		bool m_arrows = false, m_vertical = false;
+		D2D1_COLOR_F m_accent = vctl::Blue();
+		std::function<void(int)> m_cb;
+		static constexpr float kPitch = 18.0f;
+		float Start() const { float len = kPitch * (float)m_count; return (m_vertical ? vd::CY(m_bounds) : vd::CX(m_bounds)) - len * 0.5f + kPitch * 0.5f; }
+		D2D1_POINT_2F Dot(int i) const { float s = Start() + kPitch * (float)i; return m_vertical ? D2D1::Point2F(vd::CX(m_bounds), s) : D2D1::Point2F(s, vd::CY(m_bounds)); }
+		D2D1_RECT_F Arrow(int dir) const {
+			float s = Start() - kPitch * 0.5f, e = Start() + kPitch * (float)m_count - kPitch * 0.5f;
+			float a = dir < 0 ? s - 22.0f : e + 2.0f;
+			return m_vertical ? vd::Rect(vd::CX(m_bounds) - 10.0f, a, 20.0f, 20.0f) : vd::Rect(a, vd::CY(m_bounds) - 10.0f, 20.0f, 20.0f);
+		}
+		int At(float x, float y) const {
+			for (int i = 0; i < m_count; ++i) { D2D1_POINT_2F d = Dot(i); if (fabsf(x - d.x) < kPitch * 0.5f && fabsf(y - d.y) < kPitch * 0.5f) return i; }
+			if (m_arrows && vd::Contains(Arrow(-1), x, y)) return -2;
+			if (m_arrows && vd::Contains(Arrow(1), x, y))  return -3;
+			return -1;
+		}
+		void Go(int i) { i = (std::max)(0, (std::min)(m_count - 1, i)); if (i == m_sel) return; m_sel = i; if (m_cb) m_cb(i); }
+	public:
+		const char* GetTypeName() const override { return "VPipsPager"; }
+		bool CanFocus() const override { return true; }
+		VPipsPager& Count(int n)          { m_count = n; m_sel = (std::min)(m_sel, (std::max)(0, n - 1)); return *this; }
+		VPipsPager& Select(int i)         { m_sel = (std::max)(0, (std::min)(m_count - 1, i)); return *this; }
+		VPipsPager& Arrows(bool on)       { m_arrows = on; return *this; }
+		VPipsPager& Vertical(bool v)      { m_vertical = v; return *this; }
+		VPipsPager& Accent(D2D1_COLOR_F c){ m_accent = c; return *this; }
+		int Value() const { return m_sel; }
+		void OnChange(std::function<void(int)> cb) { m_cb = std::move(cb); }
+		VInputResult OnMouseMove(float x, float y) override { int h = At(x, y); if (h == m_hover) return VInputResult::NotHandled; m_hover = h; return VInputResult::Handled; }
+		VInputResult OnMouseLeave() override { m_hover = -1; return VInputResult::Handled; }
+		VInputResult OnMouseUp(float x, float y, int btn) override {
+			int i = At(x, y);
+			if (btn != 1 || i == -1) return VInputResult::NotHandled;
+			if (i == -2) Go(m_sel - 1); else if (i == -3) Go(m_sel + 1); else Go(i);
+			return VInputResult::Handled;
+		}
+		VInputResult OnKeyDown(UINT vk) override {
+			if (vk == VK_LEFT || vk == VK_UP) Go(m_sel - 1); else if (vk == VK_RIGHT || vk == VK_DOWN) Go(m_sel + 1); else return VInputResult::NotHandled;
+			return VInputResult::Handled;
+		}
+		void OnDraw(ID2D1RenderTarget* rt) override {
+			for (int i = 0; i < m_count; ++i) {
+				D2D1_POINT_2F d = Dot(i);
+				bool on = i == m_sel;
+				vd::Circle(rt, d.x, d.y, on ? 4.5f : (i == m_hover ? 3.5f : 2.5f), on ? m_accent : (i == m_hover ? vctl::Muted() : vd::Col(0xC4C9D2)));
+			}
+			if (m_arrows) for (int dir = -1; dir <= 1; dir += 2) {
+				D2D1_RECT_F a = Arrow(dir);
+				bool can = dir < 0 ? m_sel > 0 : m_sel < m_count - 1, lit = m_hover == (dir < 0 ? -2 : -3);
+				if (lit && can) vd::Fill(rt, a, vd::Col(0x000000, 0.06f), 10.0f);
+				vd::Chevron(rt, vd::CX(a), vd::CY(a), m_vertical ? (dir < 0 ? 180.0f : 0.0f) : (dir < 0 ? 90.0f : -90.0f), can ? vctl::Ink() : vd::Col(0xD1D5DB), 4.0f);
+			}
+			if (m_focused) { D2D1_POINT_2F d = Dot(m_sel); vd::Ring(rt, d.x, d.y, 8.0f, vd::Alpha(m_accent, 0.5f), 1.0f); }
+		}
+	};
+
+	// -------------------------------------------------------------------------
+	// VAnnotatedScrollBar — Value() is 0..1 of the way through the content;
+	// Labels mark positions along the rail ("2024", "March", "M"); while the
+	// thumb is dragged a tooltip names the nearest label. Wire OnChange to the
+	// scrolling widget and call Set() from its scroll so both stay in step.
+	// -------------------------------------------------------------------------
+	class VAnnotatedScrollBar : public VirtualWidgetImpl {
+	public:
+		struct Label { float at; std::wstring text; };   // at: 0..1
+	private:
+		std::vector<Label> m_labels;
+		float m_v = 0.0f, m_thumb = 0.2f;                // thumb: viewport / content, 0..1
+		bool  m_drag = false, m_hover = false;
+		float m_dragOff = 0.0f;
+		D2D1_COLOR_F m_accent = vctl::Blue();
+		std::function<void(float)> m_cb;
+		static constexpr float kRail = 6.0f, kPad = 4.0f;
+		float RailX() const { return m_bounds.right - 14.0f; }
+		float RailH() const { return vd::H(m_bounds) - kPad * 2.0f; }
+		float ThumbH() const { return (std::max)(24.0f, RailH() * m_thumb); }
+		D2D1_RECT_F Thumb() const { return vd::Rect(RailX() - kRail * 0.5f, m_bounds.top + kPad + (RailH() - ThumbH()) * m_v, kRail, ThumbH()); }
+		float YOf(float at) const { return m_bounds.top + kPad + RailH() * at; }
+		const Label* Nearest(float v) const {
+			const Label* best = nullptr; float bd = 1e9f;
+			for (const Label& l : m_labels) { float d = fabsf(l.at - v); if (d < bd) { bd = d; best = &l; } }
+			return best;
+		}
+		void SetFromY(float y) { float t = RailH() - ThumbH(); float v = t > 0.0f ? vd::Clamp01((y - m_dragOff - m_bounds.top - kPad) / t) : 0.0f; if (v != m_v) { m_v = v; if (m_cb) m_cb(v); } }
+	public:
+		const char* GetTypeName() const override { return "VAnnotatedScrollBar"; }
+		bool CanFocus() const override { return true; }
+		VAnnotatedScrollBar& Labels(std::vector<Label> v) { m_labels = std::move(v); return *this; }
+		VAnnotatedScrollBar& Set(float v)                { m_v = vd::Clamp01(v); return *this; }
+		VAnnotatedScrollBar& ThumbSize(float f)          { m_thumb = vd::Clamp(f, 0.02f, 1.0f); return *this; }   // viewport / content
+		VAnnotatedScrollBar& Accent(D2D1_COLOR_F c)      { m_accent = c; return *this; }
+		float Value() const { return m_v; }
+		void OnChange(std::function<void(float)> cb) { m_cb = std::move(cb); }
+
+		VInputResult OnMouseEnter() override { m_hover = true;  return VInputResult::Handled; }
+		VInputResult OnMouseLeave() override { m_hover = false; return VInputResult::Handled; }
+		VInputResult OnMouseDown(float x, float y, int btn) override {
+			if (btn != 1) return VInputResult::NotHandled;
+			D2D1_RECT_F t = Thumb();
+			m_dragOff = (y >= t.top && y <= t.bottom) ? y - t.top : ThumbH() * 0.5f;
+			m_drag = true; SetFromY(y); (void)x;
+			return VInputResult::Capture;
+		}
+		VInputResult OnMouseMove(float, float y) override { if (!m_drag) return VInputResult::NotHandled; SetFromY(y); return VInputResult::Handled; }
+		VInputResult OnMouseUp(float, float, int) override { m_drag = false; return VInputResult::Handled; }
+		VInputResult OnMouseWheel(float delta, float, float) override { m_v = vd::Clamp01(m_v - (delta / 120.0f) * m_thumb * 0.5f); if (m_cb) m_cb(m_v); return VInputResult::Handled; }
+		VInputResult OnKeyDown(UINT vk) override {
+			float step = m_thumb * 0.5f;
+			switch (vk) {
+				case VK_UP:    m_v = vd::Clamp01(m_v - step * 0.25f); break;   case VK_DOWN:  m_v = vd::Clamp01(m_v + step * 0.25f); break;
+				case VK_PRIOR: m_v = vd::Clamp01(m_v - step); break;           case VK_NEXT:  m_v = vd::Clamp01(m_v + step); break;
+				case VK_HOME:  m_v = 0.0f; break;                              case VK_END:   m_v = 1.0f; break;
+				default: return VInputResult::NotHandled;
+			}
+			if (m_cb) m_cb(m_v); return VInputResult::Handled;
+		}
+		void OnDraw(ID2D1RenderTarget* rt) override {
+			float rx = RailX();
+			vd::Fill(rt, vd::Rect(rx - kRail * 0.5f, m_bounds.top + kPad, kRail, RailH()), vd::Col(0xE5E7EB), kRail * 0.5f);
+			for (const Label& l : m_labels) {
+				float y = YOf(l.at);
+				vd::Line(rt, rx - 10.0f, y, rx - 5.0f, y, vd::Col(0x9CA3AF), 1.0f);
+				vd::Text(rt, l.text, D2D1::RectF(m_bounds.left, y - 9.0f, rx - 14.0f, y + 9.0f), vctl::Muted(), vd::Style().Size(11).Right());
+			}
+			D2D1_RECT_F t = Thumb();
+			vd::Fill(rt, t, (m_drag || m_hover || m_focused) ? m_accent : vd::Col(0x9CA3AF), kRail * 0.5f);
+			if (m_drag) {
+				const Label* l = Nearest(m_v + m_thumb * 0.5f);
+				std::wstring s = l ? l->text : vd::Num(m_v * 100.0) + L"%";
+				float w = vd::TextWidth(s, vd::Style().Size(12).Bold()) + 20.0f;
+				D2D1_RECT_F pill = vd::Rect(rx - 18.0f - w, vd::CY(t) - 13.0f, w, 26.0f);
+				vd::Fill(rt, pill, vd::Col(0x1F2937, 0.95f), 6.0f);
+				vd::Text(rt, s, pill, vd::Col(0xFFFFFF), vd::Style().Size(12).Bold().Center());
+			}
 		}
 	};
 

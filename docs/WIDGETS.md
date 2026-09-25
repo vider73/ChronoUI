@@ -154,6 +154,25 @@ widgets free of cached resources.
 | `VToggleButton` | VActions.hpp | Glyph (+ label) button that stays pressed; `Set`, `Value`, `OnChange`. |
 | `VSuggestions` | VActions.hpp | The list under a search box: shown with `Show(anchor, items)`, steered with `HandleKey` from `OnKeyHook`, never takes focus. |
 | `VGridView` | VCollections.hpp | Tiles painted by a callback with captions; columns from the width, own scrolling, list-style selection. |
+| `VRepeatButton` | VActions.hpp | A button that fires on the press and keeps firing while held; `Delay`, `Interval`. |
+| `VToggleSplitButton` | VActions.hpp | A split button whose main part is on or off: `Set`, `Value`, `OnChange`; the chevron's menu through `OnPick`. |
+| `VCommandBarFlyout` | VActions.hpp | A floating row of glyph commands with a "..." that unfolds the secondary rows; `Show(anchor)`, `OnPick`. |
+| `VNumberBox` | VText.hpp | A numeric field with spin buttons, `Range`, `Step`, `Decimals`; it evaluates what is typed (`2*(3+4)`) and turns red on a bad expression. |
+| `VPasswordBox` | VText.hpp | Bullets while typing; the eye reveals while held; `OnChange`, `OnSubmit`. |
+| `VRichText` | VText.hpp | A wrapped paragraph from `**bold**`, `*italic*`, `` `code` `` and `[text](url)`; links light up and fire `OnLink`; `MeasureHeight(width)` for the layout. |
+| `VFlipView` | VCollections.hpp | One page at a time, painted by a callback; arrows, keys and wheel flip, the pages slide; `OnChange`. |
+| `VPipsPager` | VCollections.hpp | The dots under a flip view, with optional arrows; `Count`, `Select`, `OnChange`. |
+| `VAnnotatedScrollBar` | VCollections.hpp | A tall scrollbar with labels along it and a tooltip while dragging; `Value` 0..1, `ThumbSize`, `OnChange`. |
+| `VSelectorBar` | VNavigation.hpp | Glyph + label choices in a row with a sliding underline; `OnChange`. |
+| `VPivot` | VNavigation.hpp | The same strip in large type and no glyphs: section headers over content the app swaps. |
+| `VCalendarView` | VNavigation.hpp | An inline month: pick a day, arrows and PgUp/PgDn move, the header zooms out to the twelve months; `OnChange(VDate)`. |
+| `VScrollViewer` | VLayout.hpp | A viewport over painted content: wheel, Shift+wheel sideways, Ctrl+wheel zooms about the cursor, drag pans, thumbs on both edges; `Content(w, h)`, `Paint`. |
+| `VSplitView` | VLayout.hpp | A pane beside the content: Inline / Overlay / CompactInline / CompactOverlay, animated; `PaneRect`, `ContentRect`, `OnLayout`. |
+| `VTwoPaneView` | VLayout.hpp | Two areas side by side when wide, stacked when tall, with a draggable divider; `Pane1Rect`, `Pane2Rect`, `OnLayout`. |
+| `VIcon` | VMedia.hpp | One Segoe MDL2 Assets glyph, a size, a colour. |
+| `VAnimatedIcon` | VMedia.hpp | A glyph that swells under the mouse and bounces on click; `OnClick`. |
+| `VImage` | VMedia.hpp | A picture from a file through WIC: None / Fill / Uniform / UniformToFill, rounded corners, a placeholder when the file is missing. |
+| `VShape` | VMedia.hpp | Rectangle, ellipse, line or polygon with a fill and a stroke; points as fractions of the bounds. |
 
 ### Widgets in the apps built on it
 
