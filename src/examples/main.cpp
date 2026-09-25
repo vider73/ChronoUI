@@ -410,7 +410,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR cmdLine, int)
 	auto switchOn    = std::make_shared<ChronoObservable<bool>>(true);
 	auto waiting     = std::make_shared<ChronoObservable<bool>>(true);
 
-	const COLORREF kInk = RGB(17, 24, 39), kMuted = RGB(107, 114, 128), kBorder = RGB(229, 231, 235);
+	const COLORREF kInk = RGB(17, 24, 39), kMuted = RGB(107, 114, 128);
 	auto text = [&](const char* s, int size, bool bold, COLORREF col) {
 		IWidget* t = WidgetFactory::Create("cw.StaticText.dll");
 		t->SetProperty("title", s)->SetProperty("font-size", std::to_string(size).c_str())->SetProperty("text-align", "left");
@@ -462,7 +462,13 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR cmdLine, int)
 	auto addPage = [&](const char* title, const wchar_t* iconName, int rows, int cols) -> ILayout* {
 		IPanel* panel = CreateChronoPanel(win);
 		pages->AddWidget(panel);
-		ILayout* grid = panel->CreateLayout(rows, cols);
+		// The grid's gaps only run between cards; the outer margin comes from
+		// a padded 1x1 layout around it (see inset()).
+		ILayout* outer = panel->CreateLayout(1, 1);
+		outer->SetProperty("border-width", "0");
+		ICell* area = outer->GetCell(0, 0);
+		area->SetProperty("padding-right", "14"); area->SetProperty("padding-bottom", "14");
+		ILayout* grid = area->CreateLayout(rows, cols);
 		grid->SetProperty("border-width", "0");
 		grid->SetProperty("row-gap", "14"); grid->SetProperty("col-gap", "14");
 		int index = (int)nav.size();

@@ -270,10 +270,12 @@ public:
 
 				// Draw Text
 				if (m_pTextLayout) {
-					// Offset the text vertically to center
+					// Centre the glyphs on the widget. The layout already centres its
+					// paragraph inside its own 50 px box (tm.top), so that offset is
+					// taken back out or the text lands on the bottom edge.
 					DWRITE_TEXT_METRICS tm;
 					m_pTextLayout->GetMetrics(&tm);
-					float textY = rect.top + (height - tm.height) / 2.0f;
+					float textY = rect.top + (height - tm.height) / 2.0f - tm.top;
 
 					pRT->DrawTextLayout(
 						D2D1::Point2F(currentX, textY),
