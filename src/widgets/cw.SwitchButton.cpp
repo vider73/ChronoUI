@@ -269,7 +269,6 @@ public:
 				}
 				else {
 					// [Text] [Switch]
-					float txtX = fW - swW - spacing - textWidth;
 					// To keep it simple, we align text rect to start at 0 and end before switch
 					switchRect = D2D1::RectF(fW - swW, swY, fW, swY + swH);
 					textRect = D2D1::RectF(0, 0, fW - swW - spacing, fH);

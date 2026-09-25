@@ -139,7 +139,6 @@ private:
 public:
 	void OnDrawWidget(ID2D1RenderTarget* pRT) override {
 		// 0. Resources
-		HRESULT hr = S_OK;
 		ID2D1Factory* pFactory = nullptr;
 		pRT->GetFactory(&pFactory); // Weak reference, don't release pFactory from GetFactory
 

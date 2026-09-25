@@ -233,9 +233,6 @@ private:
 
 		// 4. Highlight (Glint) - Offset slightly relative to pupil size
 		// Pupil top-left + percentage offset
-		float glintOffsetX = pupilW * 0.2f;
-		float glintOffsetY = -(pupilH * 0.2f); // Move up/right relative to pupil center
-
 		D2D1_POINT_2F glintCenter = D2D1::Point2F(
 			pupilCenter.x + (pupilW * 0.15f),
 			pupilCenter.y - (pupilH * 0.15f)

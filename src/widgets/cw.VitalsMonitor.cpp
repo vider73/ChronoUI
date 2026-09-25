@@ -193,7 +193,6 @@ public:
 	void OnDrawWidget(ID2D1RenderTarget* pRT) override {
 		D2D1_SIZE_F size = pRT->GetSize();
 		int width = static_cast<int>(size.width);
-		int height = static_cast<int>(size.height);
 
 		// Resize buffer if window size changes drastically
 		// We cast to int to map 1 pixel = 1 buffer entry for simplicity

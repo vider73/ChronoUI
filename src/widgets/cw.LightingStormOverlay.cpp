@@ -59,6 +59,8 @@ class LightingStormOverlay : public ChronoUI::WidgetImpl
 
 public:
 	LightingStormOverlay() {
+		// Clicks fall through to what the overlay covers (HTTRANSPARENT).
+		SetProperty("drag-through", "true");
 		// Initialize Random Number Generator
 		std::random_device rd;
 		m_rng = std::mt19937(rd());
@@ -340,9 +342,6 @@ public:
 			StopAnimation();
 			DiscardDeviceResources();
 			return false;
-
-		case WM_NCHITTEST:
-			return HTTRANSPARENT;
 
 		case WM_ERASEBKGND:
 			return 1;

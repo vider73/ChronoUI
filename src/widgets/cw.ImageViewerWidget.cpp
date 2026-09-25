@@ -56,7 +56,7 @@ private:
 public:
 	ImageViewerWidget() {
 		// Initialize WIC Factory
-		HRESULT hr = CoCreateInstance(
+		CoCreateInstance(
 			CLSID_WICImagingFactory,
 			NULL,
 			CLSCTX_INPROC_SERVER,
@@ -367,9 +367,6 @@ public:
 		// Inverse transform logic: (Mouse - Offset) / Scale
 		float ix = (m_mousePos.x - (float)m_offsetX) / (float)m_scale;
 		float iy = (m_mousePos.y - (float)m_offsetY) / (float)m_scale;
-
-		// How much of the original image fits in the magnifier?
-		float srcArea = zoomBoxSize / magnifierScale * (float)m_scale; // Correct relative sizing
 
 		// Actually, logic is simpler: 
 		// We want to draw the image at (Mouse - ix*MagScale, Mouse - iy*MagScale) scaled by MagScale.
