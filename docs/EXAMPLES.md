@@ -1,10 +1,12 @@
 # ChronoUI — Examples
 
 Fourteen small programs, each a single `.cpp` and nothing else: the virtual
-widgets are headers, so no DLL of ours sits next to the exe. They are meant to be read as much as run: every one teaches a
-handful of framework mechanisms and stays short enough to hold in your head,
-which is also what makes them good raw material for a language model. Each
-section ends with prompts that have been tried and produce working code.
+widgets are headers, so no DLL of ours sits next to the exe. They are the
+templates: the way to get a new app out of ChronoUI is to paste the closest of
+these into an assistant and say what should be different. Every one teaches a
+handful of framework mechanisms and stays short enough to fit in a context
+window whole, and each section ends with prompts that have been tried and
+produce working code.
 
 Build everything with `cmake --build build --config Release`, or one at a time
 with `--target Dashboard`. The executables land in `build/Release/`.

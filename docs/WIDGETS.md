@@ -12,6 +12,13 @@ Both are hardware accelerated, both run on the UI thread, and a single app can
 mix them (JLToys and ClaudeMM are `VirtualWindow` apps; the dashboard demo is
 all DLL widgets).
 
+The virtual widgets are the ones to use, and they all have one shape on
+purpose, so that a model that has used one can use the rest: a constructor
+with what the widget shows, chainable setters that return `*this`, one
+`OnChange`-style callback, `SetBounds` for where it goes, and colours read
+from the theme at draw time. The table in section 2 lists about sixty of them,
+named after the WinUI 3 controls they correspond to.
+
 ---
 
 ## 1. DLL widgets (`src/widgets/cw.*.cpp`)

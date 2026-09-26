@@ -17,10 +17,20 @@ lock and the link step fails with `LNK1104`.
 - **A new `cw.*` widget.** One self-contained `.cpp` in `src/widgets/`, plus its
   path in `WIDGET_SOURCES` in the root `CMakeLists.txt`. Nothing else to touch.
   Copy the closest existing widget as a template.
+- **An example.** One `.cpp` in `src/examples/`, its name in
+  `CHRONOUI_VIRTUAL_EXAMPLES` in the root `CMakeLists.txt`, a section in
+  `docs/EXAMPLES.md` with the prompts you tried. Pick a kind of app the
+  fourteen do not cover yet.
+- **A new virtual widget.** One class in the header of its family (a knob goes
+  in `VControls.hpp`, a popup on `VFlyout` in `VNavigation.hpp`...), the same
+  shape as its neighbours: chainable setters, `OnChange`, `OnDraw`, maybe
+  `OnUpdate`. Add a cell to `src/examples/Catalog.cpp` and a row to
+  `docs/WIDGETS.md`; read colours from `vctl::`, never as literals, so it
+  works in both themes.
 - **Tests for the parsers** — `TableSpec`, base64, the small JSON walkers. They
   are textual and easy to fuzz, and they are where malformed model output bites.
-- **A GitHub Actions workflow** that builds and attaches a zip on tag.
-- **A dark palette** for the virtual widgets.
+- **A second theme.** `VTheme` has light and dark; a high-contrast one is a
+  struct away.
 
 ## Conventions
 

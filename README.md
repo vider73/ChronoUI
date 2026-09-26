@@ -2,7 +2,7 @@
 
 # ChronoUI
 
-### Native Windows UIs in C++ that don't look like 1998 — and don't ship a browser.
+### The Windows UI framework a language model can drive: headers only, no dependencies, good-looking by default.
 
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2B-0078D4?logo=windows&logoColor=white)](#building)
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white)](#building)
@@ -11,8 +11,8 @@
 [![build](https://github.com/vider73/ChronoUI/actions/workflows/build.yml/badge.svg)](https://github.com/vider73/ChronoUI/actions/workflows/build.yml)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**Clone it, build it, run it — with nothing but Visual Studio and the Windows SDK.**
-No vcpkg, no package manager, no runtime, no bundled browser. The virtual widgets are **headers only**: your `.cpp`, the Windows SDK, and nothing to ship next to the exe. GPU-accelerated, cold start under a second.
+**Tell your assistant what the app should do, hand it one example as a template, and get a native Windows program back: one `.cpp`, the Windows SDK, nothing to install and nothing to ship next to the exe.**
+About sixty widgets in the WinUI 3 vocabulary, light and dark, GPU-accelerated, cold start under a second. No vcpkg, no package manager, no runtime, no bundled browser, no XAML.
 
 ![VirtualShowcase — the guided tour of the framework](docs/screenshots/virtual-showcase.png)
 
@@ -24,11 +24,11 @@ No vcpkg, no package manager, no runtime, no bundled browser. The virtual widget
 
 ## Why this exists
 
-Native Windows UI has been stuck for twenty years. The options are MFC (1992 ergonomics), WinUI (a moving target), Qt (licensing), or Electron (150 MB and half a gigabyte of RAM to draw a text box).
+Ask a model for a Windows desktop app today and you get Electron (150 MB and half a gigabyte of RAM to draw a text box), or a fight with WinUI and XAML, or MFC with its 1992 ergonomics. None of those is something a model does well from a prompt, and none of them looks good without a designer.
 
-ChronoUI is the fourth option: **plain C++17 on Direct2D + DirectWrite**. A window is one HWND and one render target. Widgets are C++ objects with a paint method, or hot-pluggable DLLs with CSS-like styling. The core is about 9,000 lines you can read in an afternoon, and it has **zero external dependencies** — the whole framework, its 23 widgets and every example build against the Windows SDK alone.
+ChronoUI is the other option: **plain C++17 on Direct2D + DirectWrite**. A window is one HWND and one render target. A widget is a C++ object with a paint method; a screen is one function that places widgets in rectangles. The framework is headers you can read in an afternoon, it has **zero external dependencies**, and everything in it builds against the Windows SDK alone.
 
-It is also, deliberately, **easy for a language model to extend** — and that is not a slogan, it is the project's own history. See [Credits](#credits).
+It was written with models, on purpose, and it is shaped so that a model can pick it up: see [Made for a model to drive](#made-for-a-model-to-drive) and [Credits](#credits).
 
 **Honest scope:** Windows only. Direct2D goes deep into the design, so a Linux or macOS port is a rewrite, not a port. If that is a dealbreaker, stop here — no hard feelings.
 
@@ -45,6 +45,25 @@ build\Release\VirtualShowcase.exe
 ```
 
 That is the whole prerequisite list: Visual Studio 2022 with the Desktop C++ workload, and CMake. Nothing to install first, nothing to configure.
+
+---
+
+## Made for a model to drive
+
+What makes a UI framework usable from a prompt is not magic, it is a handful of properties that most frameworks do not have and this one was built around:
+
+- **An app is one file.** Every example is a single `.cpp` of 200 to 400 lines that includes headers and nothing else. The whole program fits in a context window, so the model reads all of it and writes all of it. No project wizard, no XAML, no resource files, no designer.
+- **Every widget has the same shape.** Chainable setters, one `OnChange`, `SetBounds` for where it goes. Once a model has seen `VSlider` it can use `VCalendarView`. There are about sixty of them, named after the WinUI 3 controls they correspond to, so a model that knows Windows already knows the vocabulary.
+- **Layout is a function.** No constraint solver, no XAML tree: `layout()` puts rectangles where they go, and containers that move (a split view opening, an expander unfolding) call it back. A model can reason about it because it is arithmetic.
+- **A widget is two methods.** `OnDraw` and, if it moves, `OnUpdate(dt)`. `VDraw.hpp` gives the paint code a vocabulary (`vd::Fill`, `vd::Text`, `vd::Arc`, gradients, easing) so a new widget is a description of the picture, not Direct2D plumbing.
+- **It looks right without a designer.** Light and dark themes, WinUI-style spacing and motion, focus rings, tooltips, keyboard on everything. The [Catalog](#the-examples) shows each widget in its resting state, so a model can check its work against a picture.
+- **The docs are written for the model too.** `CLAUDE.md` holds the conventions and the traps; [docs/EXAMPLES.md](docs/EXAMPLES.md) ends every example with prompts that have been tried; `tools/shoot.ps1` takes screenshots of an exe so an assistant can look at what it built.
+
+The recipe, then: pick the example closest to what you want, paste it, and say what should change.
+
+> *"Here is `Mail.cpp` from ChronoUI. Turn it into a support-ticket desk: tickets instead of mails, a priority badge on each row, a status selector bar above the list, and a Resolve button that asks for confirmation. Keep the layout function; only change what must change."*
+
+That prompt, against a current model, comes back as a working program. Fourteen such starting points are below.
 
 ---
 
@@ -106,7 +125,7 @@ btn->SetProperty("title", "Submit")
    ->addEventHandler("onClick", [](IWidget* s, const char* json) { /* … */ });
 ```
 
-Every widget DLL exports a **JSON manifest** — properties, types, defaults, events. That is what makes the model extensible by prompt: hand an assistant one existing widget file and it has the entire contract. **23 widgets ship today**: buttons, inputs, switches, sliders, cards, an image viewer with a magnifier, a real-time plot, a CRT-style vitals monitor, an LED equalizer, three gauges, clocks, mouse-following eyes, and snow / storm / spinner overlays.
+Every widget DLL exports a **JSON manifest** — properties, types, defaults, events. That is what makes this model extensible by prompt: hand an assistant one existing widget file and it has the entire contract. **23 widgets ship today**: buttons, inputs, switches, sliders, cards, an image viewer with a magnifier, a real-time plot, a CRT-style vitals monitor, an LED equalizer, three gauges, clocks, mouse-following eyes, and snow / storm / spinner overlays. It is the older of the two models; new work goes to the virtual widgets, and this one stays because the manifest and the CSS make a good story for generated widgets.
 
 ![ChronoUIDemo — the 23 widgets, one family per page](docs/screenshots/widgets-dashboard.png)
 
@@ -153,12 +172,15 @@ target_link_libraries(MyApp PRIVATE ChronoUI)
 
 ---
 
-## Add a widget with a prompt
+## Working with a model
 
-1. Pick the closest existing widget in `src/widgets/` as a template — `cw.GaugeSpeedOmeter.cpp` for anything circular, `cw.DataPlotControl.cpp` for graphs, `cw.Button.cpp` for inputs.
-2. Paste it into your assistant of choice: *"Here is a ChronoUI widget. Write `cw.WifiSignalWidget` with a `signal_strength` property (0-100) that lights up four bars. Include the JSON manifest. One `.cpp`, ready to compile."*
-3. Save it as `src/widgets/cw.WifiSignalWidget.cpp` and add that path to `WIDGET_SOURCES` in `CMakeLists.txt`.
-4. `WidgetFactory::Create("cw.WifiSignalWidget.dll")->SetProperty("signal_strength", "75");`
+**A new screen.** Pick the example closest to what you want from [docs/EXAMPLES.md](docs/EXAMPLES.md), paste it, and describe the difference. Each example's section ends with prompts that have been tried. Keep the model on the example's `layout()` function: that is where every rectangle is decided, and it is the part a model gets right when it is arithmetic and wrong when it is a tree.
+
+**A new virtual widget.** Paste the closest one from `include/` (a `VSlider` for anything with a knob, `VListView` for anything with rows, `VProgressRing` for anything that spins) and ask for yours: two methods, `OnDraw` and maybe `OnUpdate`, the same chainable setters, `OnChange` for the event. Add it to the Catalog page it belongs to and shoot it with `tools/shoot.ps1` to see it.
+
+**A new DLL widget.** Pick the closest in `src/widgets/` (`cw.GaugeSpeedOmeter.cpp` for anything circular, `cw.DataPlotControl.cpp` for graphs, `cw.Button.cpp` for inputs), paste it: *"Write `cw.WifiSignalWidget` with a `signal_strength` property (0-100) that lights up four bars. Include the JSON manifest. One `.cpp`, ready to compile."* Save it under `src/widgets/`, add the path to `WIDGET_SOURCES` in `CMakeLists.txt`, and `WidgetFactory::Create("cw.WifiSignalWidget.dll")->SetProperty("signal_strength", "75");`.
+
+**Let it see.** `tools/shoot.ps1 -Exe build\Release\MyApp.exe -Out shot.png` launches the exe, waits for the window and saves it as a PNG; the Catalog and the demos take a page number and `dark` on the command line so every page can be shot without a click. A model that can read the picture fixes its own layout.
 
 ---
 
@@ -166,9 +188,10 @@ target_link_libraries(MyApp PRIVATE ChronoUI)
 
 Pull requests are welcome, including ones written mostly by a model — that is how the project got here. Good places to start:
 
-- **A new `cw.*` widget.** Self-contained, one file, no coordination needed.
-- **Tests for the parsers.** They are textual and easy to fuzz.
+- **An example.** One `.cpp` that shows a kind of app the fourteen do not: a chat client, an installer, a music player, a log viewer.
+- **A new virtual widget.** One class in the header of its family, a cell in the Catalog, a row in `docs/WIDGETS.md`.
 - **A second theme.** `VTheme` has light and dark; a high-contrast or a tinted one is a struct away.
+- **Tests for the parsers.** They are textual and easy to fuzz.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the conventions and the traps worth knowing.
 
@@ -177,10 +200,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the conventions and the traps worth k
 ## Repository map
 
 ```
-include/            the whole framework, sixteen headers:
-                    ChronoUI · ChronoStyles · WidgetImpl · ContextNodeImpl
-                    VirtualWidget · VirtualChat · VControls · VNavigation
-                    VCollections · VActions · VIndicators · VDraw
+include/            the whole framework, nineteen headers:
+                    VirtualWidget (the host, the theme) · VDraw · VControls
+                    VNavigation · VCollections · VActions · VIndicators
+                    VText · VMedia · VLayout · VirtualChat      the virtual widgets
+                    ChronoUI · ChronoStyles · WidgetImpl · ContextNodeImpl   the DLL model
                     ChatImage · virtual_drive · funMessageBox · AppPaths
 src/core/           layout engine, window management, CSS parser
 src/widgets/        cw.*.cpp — one hot-pluggable DLL widget per file
@@ -197,7 +221,7 @@ docs/               EXAMPLES.md, WIDGETS.md and screenshots/
 
 **Architect:** Jose Luis Rey Mejías — [@vider73](https://github.com/vider73). Decades of MSVC C++ and a long grudge against the state of native Windows UI.
 
-**Written with models, on purpose.** The first widget set and the layout/CSS engine came out of pair-programming sessions with **Gemini**. The virtual-widget model, the apps and most of what you are reading were built with **Claude Code**. The codebase is shaped so that a model can pick it up and extend it — small self-contained files, declared contracts, conventions written down in `CLAUDE.md`. That is the whole thesis, and the repo is the evidence.
+**Written with models, on purpose.** The first widget set and the layout/CSS engine came out of pair-programming sessions with **Gemini**. The virtual-widget model, the sixty widgets, the fourteen examples, the apps and most of what you are reading were built with **Claude Code**, one session per round, against the WinUI 3 controls list. The codebase is shaped so that a model can pick it up and extend it — small self-contained files, one shape for every widget, conventions written down in `CLAUDE.md`. That is the whole thesis, and the repo is the evidence.
 
 **License:** [MIT](LICENSE). Material Design icons keep their own licence, in `assets/`.
 

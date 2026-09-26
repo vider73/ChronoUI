@@ -5,7 +5,13 @@ short version of what a session needs to be productive in its first turn.
 
 ## What this is
 
-**ChronoUI is a Win32 / Direct2D widget framework.** Two models: the virtual
+**ChronoUI is a Win32 / Direct2D widget framework built to be driven by a
+model like you.** An app is one `.cpp` that includes headers; every widget has
+the same shape (chainable setters, `OnChange`, `SetBounds`); a screen is one
+`layout()` function of rectangles; a widget is `OnDraw` and maybe
+`OnUpdate(dt)`. When asked for a new app, start from the closest example in
+`src/examples/` and keep its structure. When asked for a new widget, copy the
+closest class in its family's header and keep its shape. Two models: the virtual
 widgets, which are headers only (`include/V*.hpp`, no DLL to ship), and the
 older DLL model, `ChronoUI.dll` (a layout engine and a CSS parser in
 `src/core/`) plus 23 hot-pluggable widget DLLs in `src/widgets/`. Fourteen
