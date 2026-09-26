@@ -14,9 +14,6 @@ lock and the link step fails with `LNK1104`.
 
 ## Good first contributions
 
-- **A new `cw.*` widget.** One self-contained `.cpp` in `src/widgets/`, plus its
-  path in `WIDGET_SOURCES` in the root `CMakeLists.txt`. Nothing else to touch.
-  Copy the closest existing widget as a template.
 - **An example.** One `.cpp` in `src/examples/`, its name in
   `CHRONOUI_VIRTUAL_EXAMPLES` in the root `CMakeLists.txt`, a section in
   `docs/EXAMPLES.md` with the prompts you tried. Pick a kind of app the
@@ -45,8 +42,8 @@ lock and the link step fails with `LNK1104`.
 - **A widget paints in its host's coordinate space** using its own `GetBounds()`,
   and returns `Handled` from `OnMouseMove` only when something visual actually
   changed — that return value is what triggers a repaint.
-- **New DLL widgets must export the JSON manifest** (properties, types, defaults,
-  events). It is the contract the tooling and the assistants read.
+- **Colours come from the theme.** `vctl::Surface()`, `Border()`, `Outline()`,
+  `Ink()`, `Hover(alpha)`; a literal grey in a widget breaks the dark theme.
 
 `CLAUDE.md` at the repo root is the long-form version: the design vocabulary,
 the conventions, and the traps that cost someone a day. Worth a skim before a

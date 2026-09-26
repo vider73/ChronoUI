@@ -24,7 +24,7 @@ with `--target Dashboard`. The executables land in `build/Release/`.
 | [Settings](#settings--an-app-shell-in-the-winui-3-vocabulary) | Navigation, tabs, expanders, info bar, menu, date picker, list, tree | ~330 |
 | [Mail](#mail--three-panes-a-command-bar-and-a-dialog) | Folders, a message list, a command bar with overflow, a modal dialog | ~300 |
 | [Photos](#photos--a-menu-bar-a-grid-of-painted-pictures-a-colour-picker) | Menu bar, painted grid, search suggestions, colour picker, split button | ~300 |
-| [Catalog](#catalog--every-widget-one-page-per-family) | The reference sheet: every widget on seven pages | ~350 |
+| [Catalog](#catalog--every-widget-one-page-per-family) | The reference sheet: every widget on nine pages | ~420 |
 | [Booking](#booking--a-hotel-stay-on-the-v3-widgets) | Split view, calendar, number box, flip view, pivot, rich text, a zoomable scroll viewer | ~330 |
 | VirtualHello | The smallest possible app: a label and a button | 60 |
 
@@ -362,12 +362,15 @@ Or: *"Make the grid's tile size follow a VSlider in the toolbar."*
 ![Catalog](screenshots/catalog.png)
 
 **What it shows.** The reference sheet: Basics, Input, Status, Navigation,
-Collections, Text & media and Layout, every virtual widget in its resting
-state, ready to be clicked. The status line at the bottom says what each click
+Collections, Text & media, Layout, Instruments (gauges, a clock, an ECG, an
+equalizer, a plot) and Effects (eyes, snow, a storm, a ticker, a busy veil),
+every widget in its resting state, ready to be clicked. The status line at the bottom says what each click
 did. A page number on the command line opens that page; `dark` after it starts
 in the dark theme, and the toggle at the top right switches live.
 
 ![Catalog, the Layout page](screenshots/catalog-layout.png)
+
+![Catalog, the Instruments page](screenshots/catalog-instruments.png)
 
 **How it works.**
 - A page is a list of cells, a caption above one or more widgets; `layout()`

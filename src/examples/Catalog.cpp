@@ -25,6 +25,8 @@
 #include "VText.hpp"
 #include "VMedia.hpp"
 #include "VLayout.hpp"
+#include "VInstruments.hpp"
+#include "VEffects.hpp"
 #include "VDraw.hpp"
 #include "AppPaths.hpp"
 
@@ -66,14 +68,16 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR cmdLine, int) {
 
 	auto* nav = win.Add<VNavView>(
 		std::vector<VNavView::Item>{ { L"\xE8FD", L"Basics" }, { L"\xE70F", L"Input" }, { L"\xE946", L"Status" }, { L"\xE8A5", L"Navigation" },
-		                             { L"\xE8FD", L"Collections" }, { L"\xE8D2", L"Text & media" }, { L"\xE8A1", L"Layout" } },
+		                             { L"\xE8FD", L"Collections" }, { L"\xE8D2", L"Text & media" }, { L"\xE8A1", L"Layout" },
+		                             { L"\xE9D9", L"Instruments" }, { L"\xE945", L"Effects" } },
 		std::vector<VNavView::Item>{ { L"\xE946", L"About" } });
 	nav->Badge(2, 3);
 	auto* title  = label(L"", 26.0f);
 	auto* status = label(L"Click anything; this line says what happened.", 12.0f, true);
-	std::vector<Page> pages(8);
+	std::vector<Page> pages(10);
 	pages[0].title = L"Basics"; pages[1].title = L"Input"; pages[2].title = L"Status"; pages[3].title = L"Navigation";
-	pages[4].title = L"Collections"; pages[5].title = L"Text & media"; pages[6].title = L"Layout"; pages[7].title = L"About";
+	pages[4].title = L"Collections"; pages[5].title = L"Text & media"; pages[6].title = L"Layout";
+	pages[7].title = L"Instruments"; pages[8].title = L"Effects"; pages[9].title = L"About";
 	std::vector<VFlyout*> flyouts;
 	auto say = [&](const std::wstring& s) { status->Text(s); repaint(); };
 
@@ -135,7 +139,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR cmdLine, int) {
 	cell(1, L"VNumberBox (spin \x00B7 type an expression, Enter) \x00B7 VPasswordBox (hold the eye)", 34.0f, { num, num2, pwd }, true);
 	auto* drop = win.AddChrome<VDropDown>(); drop->Attach(&win); flyouts.push_back(drop);
 	drop->Items({ L"Segoe UI", L"Consolas", L"Cascadia Code", L"Georgia" }).Prefix(L"Font: ");
-	drop->OnChange([&](int i) { say(L"Dropdown: " + drop->SelectedText()); });
+	drop->OnChange([&](int) { say(L"Dropdown: " + drop->SelectedText()); });
 	cell(1, L"VDropDown", 32.0f, { drop });
 	auto* date = win.AddChrome<VDatePicker>(); date->Attach(&win); flyouts.push_back(date);
 	auto* time = win.AddChrome<VTimePicker>(); time->Attach(&win); flyouts.push_back(time); time->Set({ 14, 30 });
@@ -310,15 +314,51 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR cmdLine, int) {
 	auto* p2l = label(L"Pane 2", 13.0f);
 	cell(6, L"VTwoPaneView", 140.0f, { p1, p2, two, p1l, p2l }, true);
 
+	// --- Instruments ------------------------------------------------------------
+	auto* speed = win.Add<VGauge>(); speed->Range(0.0f, 240.0f).Unit(L"km/h").Label(L"SPEED").Ticks(12).Snap(0.0f);
+	auto* temp = win.Add<VGauge>();  temp->Range(60.0f, 130.0f).Unit(L"\x00B0" L"C").Label(L"ENGINE").Ticks(7).Fill(false).Snap(60.0f).Set(91.0f)
+	    .Zones({ { 60.0f, 95.0f, vd::Col(0x22C55E) }, { 95.0f, 112.0f, vd::Col(0xF59E0B) }, { 112.0f, 130.0f, vd::Col(0xEF4444) } });
+	auto* batt = win.Add<VGauge>();  batt->Range(10.0f, 15.0f).Unit(L"V").Label(L"BATTERY").Ticks(10).Fill(false).Snap(10.0f).Set(12.6f)
+	    .Zones({ { 10.0f, 11.5f, vd::Col(0xEF4444) }, { 11.5f, 12.4f, vd::Col(0xF59E0B) }, { 12.4f, 15.0f, vd::Col(0x22C55E) } });
+	cell(7, L"VGauge: a speedometer (driven from OnTick), an engine temperature, a battery", 150.0f, { speed, temp, batt }, true);
+	auto* clock = win.Add<VAnalogClock>();
+	cell(7, L"VAnalogClock", 120.0f, { clock });
+	auto* plot = win.Add<VPlot>(); plot->Range(0.0f, 100.0f).Label(L"LOAD").Unit(L"%").Capacity(90);
+	cell(7, L"VPlot (a random walk pushed twice a second)", 120.0f, { plot });
+	auto* vitals = win.Add<VVitals>(); vitals->Simulate(true).Rate(72.0f);
+	cell(7, L"VVitals (a simulated ECG; Push() your own signal)", 100.0f, { vitals }, true);
+	auto* eq = win.Add<VEqualizer>(24); eq->Simulate(true);
+	cell(7, L"VEqualizer (simulated; Set() the levels)", 70.0f, { eq }, true);
+	float tickT = 0.0f, plotAcc = 0.0f, walk = 40.0f;
+	int current = 0;
+	win.OnTick([&](float dt) {
+		tickT += dt; speed->Set(120.0f + 100.0f * sinf(tickT * 0.6f));
+		plotAcc += dt;
+		if (plotAcc >= 0.5f) { plotAcc = 0.0f; walk = vd::Clamp(walk + (float)(rand() % 21 - 10), 5.0f, 95.0f); plot->Push(walk); if (current == 7) repaint(); }
+	});
+
+	// --- Effects ----------------------------------------------------------------
+	auto* eyes = win.Add<VEyes>(); eyes->Window(hwnd);
+	cell(8, L"VEyes (they follow the mouse anywhere on the screen)", 120.0f, { eyes });
+	auto* ticker = win.Add<VTicker>(L"VTicker scrolls a line of text across a dark bar, like the news channel at the airport \x00B7 Text(), Speed() \x00B7");
+	cell(8, L"VTicker", 40.0f, { ticker });
+	auto* snowCard = win.Add<VCard>(); auto* snowLbl = label(L"Snowing", 16.0f); auto* snow = win.Add<VSnow>();
+	cell(8, L"VSnow over a card (the mouse passes through)", 140.0f, { snowCard, snowLbl, snow });
+	auto* stormCard = win.Add<VCard>(); auto* stormLbl = label(L"Lightning storm", 16.0f); auto* storm = win.Add<VStorm>();
+	cell(8, L"VStorm over a card: rain, and a bolt every few seconds", 140.0f, { stormCard, stormLbl, storm });
+	auto* busyCard = win.Add<VCard>(); auto* busyBtn = win.Add<VButton>(); busyBtn->Text(L"Toggle busy");
+	auto* busy = win.Add<VBusy>(); busy->Text(L"Working\x2026");
+	busyBtn->OnClick([&] { busy->Active(!busy->IsActive()); say(busy->IsActive() ? L"Busy: the veil takes the clicks." : L"Busy off."); });
+	cell(8, L"VBusy over a card (the button turns it on; the veil takes the clicks, the app decides when it goes)", 110.0f, { busyCard, busyBtn, busy }, true);
+
 	// --- About ----------------------------------------------------------------
 	auto* aboutCard = win.Add<VCard>();
 	auto* a1 = label(L"Every virtual widget in the framework, one page per family.", 14.0f);
-	auto* a2 = label(L"Headers: VirtualWidget, VirtualChat, VControls, VNavigation, VCollections, VActions, VIndicators, VText, VMedia, VLayout, VDraw.", 13.0f, true);
+	auto* a2 = label(L"Headers: VirtualWidget, VirtualChat, VControls, VNavigation, VCollections, VActions, VIndicators, VText, VMedia, VLayout, VInstruments, VEffects, VDraw.", 13.0f, true);
 	auto* a3 = label(L"Open this after changing a header: if it looks right here, it looks right everywhere.", 13.0f, true);
-	cell(7, L"", 110.0f, { aboutCard, a1, a2, a3 }, true);
+	cell(9, L"", 110.0f, { aboutCard, a1, a2, a3 }, true);
 
 	// --- pages + layout ---------------------------------------------------------
-	int current = 0;
 	std::function<void()> layout;
 	auto showPage = [&](int i) {
 		current = i;
@@ -376,6 +416,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR cmdLine, int) {
 				else if (t == "VAnimatedIcon") ww = 44.0f;
 				else if (t == "VShape") ww = 70.0f;
 				else if (t == "VImage") ww = 180.0f;
+				else if (t == "VGauge") ww = (cw - 28.0f) / 3.0f;
 				if (wd == tabCard)  { wd->SetBounds(vd::Rect(cx, wy + 40.0f, cw, c.h - 40.0f)); continue; }
 				if (wd == expInner) { wd->SetBounds(vd::Rect(cx + 16.0f, wy + VExpander::kHeader + 16.0f, cw - 32.0f, 24.0f)); wd->SetVisible(current == 3 && expander->ContentVisible()); continue; }
 				if (wd == expander) { wd->SetBounds(vd::Rect(cx, wy, cw, expander->ShownHeight())); continue; }
@@ -389,6 +430,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR cmdLine, int) {
 				if (wd == p2)  { two->SetBounds(body); wd->SetBounds(two->Pane2Rect()); continue; }
 				if (wd == p1l) { D2D1_RECT_F r = two->Pane1Rect(); wd->SetBounds(vd::Rect(r.left + 16.0f, r.top + 12.0f, vd::W(r) - 24.0f, 24.0f)); continue; }
 				if (wd == p2l) { D2D1_RECT_F r = two->Pane2Rect(); wd->SetBounds(vd::Rect(r.left + 16.0f, r.top + 12.0f, vd::W(r) - 24.0f, 24.0f)); continue; }
+				if (wd == snowCard || wd == snow || wd == stormCard || wd == storm || wd == busyCard || wd == busy) { wd->SetBounds(body); continue; }
+				if (wd == snowLbl || wd == stormLbl) { wd->SetBounds(vd::Rect(cx + 16.0f, wy + 12.0f, cw - 32.0f, 24.0f)); continue; }
+				if (wd == busyBtn) { wd->SetBounds(vd::Rect(cx + 16.0f, wy + 16.0f, 130.0f, 36.0f)); continue; }
 				if (wd == aboutCard) { wd->SetBounds(body); continue; }
 				if (wd == a1 || wd == a2 || wd == a3) { float k = wd == a1 ? 0.0f : (wd == a2 ? 1.0f : 2.0f); wd->SetBounds(vd::Rect(cx + 20.0f, wy + 18.0f + 26.0f * k, cw - 40.0f, 24.0f)); continue; }
 				wd->SetBounds(vd::Rect(wx, wy, ww, wh));

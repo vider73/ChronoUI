@@ -53,8 +53,9 @@
 
 #pragma comment(lib, "Shell32.lib")
 
-#include "ChronoUI.hpp"        // for D2D types via the wrl ComPtr alias, plus CHRONO_API
-#include "WidgetImpl.hpp"      // for ChronoControllerImpl factories (DWrite/D2D)
+#include <windowsx.h>              // GET_X_LPARAM / GET_Y_LPARAM
+#include <shellapi.h>              // DragAcceptFiles, DragQueryFileW
+#include "ChronoController.hpp"   // the D2D / DWrite / WIC factories; nothing else of the framework
 
 namespace ChronoUI {
 

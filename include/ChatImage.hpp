@@ -25,7 +25,7 @@
 #include <memory>
 #include <fstream>
 
-#include "ChronoUI.hpp"   // ComPtr alias
+#include "ChronoController.hpp"   // ComPtr, the WIC factory
 
 #pragma comment(lib, "Windowscodecs.lib")
 #pragma comment(lib, "Ole32.lib")
