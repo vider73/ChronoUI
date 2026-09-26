@@ -57,7 +57,7 @@ What makes a UI framework usable from a prompt is not magic, it is a handful of 
 - **Layout is a function.** No constraint solver, no XAML tree: `layout()` puts rectangles where they go, and containers that move (a split view opening, an expander unfolding) call it back. A model can reason about it because it is arithmetic.
 - **A widget is two methods.** `OnDraw` and, if it moves, `OnUpdate(dt)`. `VDraw.hpp` gives the paint code a vocabulary (`vd::Fill`, `vd::Text`, `vd::Arc`, gradients, easing) so a new widget is a description of the picture, not Direct2D plumbing.
 - **It looks right without a designer.** Light and dark themes, WinUI-style spacing and motion, focus rings, tooltips, keyboard on everything. The [Catalog](#the-examples) shows each widget in its resting state, so a model can check its work against a picture.
-- **The docs are written for the model too.** `CLAUDE.md` holds the conventions and the traps; [docs/EXAMPLES.md](docs/EXAMPLES.md) ends every example with prompts that have been tried; `tools/shoot.ps1` takes screenshots of an exe so an assistant can look at what it built.
+- **The docs are written for the model too.** [docs/API.md](docs/API.md) is the whole API in one file, generated from the headers: the app skeleton, the widget contract, every class and every public method. `CLAUDE.md` holds the conventions and the traps; [docs/EXAMPLES.md](docs/EXAMPLES.md) ends every example with prompts that have been tried; `tools/shoot.ps1` takes screenshots of an exe so an assistant can look at what it built; `llms.txt` at the root points a crawler at all of it.
 
 The recipe, then: pick the example closest to what you want, paste it, and say what should change.
 
@@ -157,6 +157,8 @@ Or copy `include/` next to your sources. The Windows SDK libraries come in throu
 
 ## Working with a model
 
+**Give it the API.** Paste [docs/API.md](docs/API.md) into the context, or point the model at it: it is the whole framework in about 1,300 lines, and it is regenerated from the headers (`python tools/api_md.py`) so it never lies.
+
 **A new screen.** Pick the example closest to what you want from [docs/EXAMPLES.md](docs/EXAMPLES.md), paste it, and describe the difference. Each example's section ends with prompts that have been tried. Keep the model on the example's `layout()` function: that is where every rectangle is decided, and it is the part a model gets right when it is arithmetic and wrong when it is a tree.
 
 **A new widget.** Paste the closest one from `include/` (a `VSlider` for anything with a knob, `VListView` for anything with rows, `VGauge` for anything with a needle) and ask for yours: two methods, `OnDraw` and maybe `OnUpdate`, the same chainable setters, `OnChange` for the event, colours from `vctl::` so it works in both themes. Add it to the Catalog page it belongs to and shoot it with `tools/shoot.ps1` to see it.
@@ -189,7 +191,9 @@ include/            the whole framework, fourteen headers:
                     VirtualChat · ChatImage · AppPaths
 src/examples/       the fourteen examples (docs/EXAMPLES.md), one .cpp each
 tools/shoot.ps1     the screenshot driver behind every image in this README
-docs/               EXAMPLES.md, WIDGETS.md and screenshots/
+tools/api_md.py     regenerates docs/API.md from the headers
+docs/               API.md, EXAMPLES.md, WIDGETS.md and screenshots/
+llms.txt            the map of the above, for a crawler or a context window
 ```
 
 `tools/shoot.ps1` launches an executable, waits for its window, optionally drives it with keystrokes and clicks, and saves the PNG — every screenshot here is generated, not hand-cropped.

@@ -1,0 +1,19 @@
+# ChronoUI
+
+> A Win32 / Direct2D widget framework for C++17, headers only, zero dependencies, built to be driven by a language model: one .cpp per app, about seventy widgets of one shape named after the WinUI 3 controls, light and dark themes, fourteen examples that double as prompt templates.
+
+Start with docs/API.md: it is the whole API in one file, generated from the headers, with the app skeleton, the widget contract and every class's public methods. To write an app, paste the closest example from src/examples/ and say what should change; to write a widget, copy the closest class in its family's header.
+
+## Docs
+
+- [API, in one file](docs/API.md): the app skeleton, the widget contract, every class and function
+- [Examples](docs/EXAMPLES.md): the fourteen programs, what each teaches, prompts that have been tried
+- [Widgets](docs/WIDGETS.md): every widget with what it is for, the host, the theme, the drawing helpers
+- [README](README.md): what this is and why, the sixty-second build
+- [CLAUDE.md](CLAUDE.md): the conventions and the traps, written for a model
+- [Contributing](CONTRIBUTING.md): how to add an example or a widget
+
+## Source
+
+- [include/](include/): the framework, one header per family; VirtualWidget.hpp is the host
+- [src/examples/](src/examples/): the fourteen examples, one .cpp each; Catalog.cpp shows every widget

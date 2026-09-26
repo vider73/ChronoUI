@@ -20,9 +20,14 @@ no DLL, no library to build, and **no external dependency**: Visual Studio
 `find_package(... REQUIRED)` in `CMakeLists.txt` is a regression. Fourteen
 examples in `src/examples/`, one file each.
 
+**Read `docs/API.md` first**: the whole API in one file, generated from the
+headers by `tools/api_md.py`, with the app skeleton, the widget contract and
+every class's public methods. After touching a header, run
+`python tools/api_md.py` so it stays true; the CI checks it.
+
 Human-facing docs: `README.md` (front page), `docs/EXAMPLES.md` (every example
-and how it works), `docs/WIDGETS.md` (every widget), `CONTRIBUTING.md`. Keep
-them in sync when you add a widget or an example.
+and how it works), `docs/WIDGETS.md` (every widget), `CONTRIBUTING.md`,
+`llms.txt` (the map). Keep them in sync when you add a widget or an example.
 
 ## How it works
 

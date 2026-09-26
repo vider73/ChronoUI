@@ -15,6 +15,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: docs/API.md matches the headers
+        run: python tools/api_md.py --check
+
       - name: Configure
         run: cmake -S . -B build -A x64
 
