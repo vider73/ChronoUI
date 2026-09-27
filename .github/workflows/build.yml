@@ -13,7 +13,7 @@ jobs:
   windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: docs/API.md matches the headers
         run: python tools/api_md.py --check
@@ -33,7 +33,7 @@ jobs:
           $exes.Name
 
       - name: Upload the executables
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ChronoUI-examples-${{ github.sha }}
           path: |
