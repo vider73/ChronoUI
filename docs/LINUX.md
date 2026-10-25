@@ -73,6 +73,15 @@ The fonts in `assets/fonts/` are registered with fontconfig for the running
 process only (`RegisterAppFonts()`), from `<exe dir>/assets/fonts`, where the
 build stages them.
 
+## Popup menus
+
+`TrackPopupMenu` (behind `VCombo` and the chat's Copy menu) is a borderless
+SDL window the port draws itself, with keyboard navigation and light dismiss.
+It takes its look from the surface it drops from: every window keeps its last
+presented frame, the menu samples it where it is anchored, and a dark surface
+gets the dark palette. The colours are `VTheme`'s, so the menu matches the app
+in both themes without the widgets knowing it is not Windows' menu.
+
 ## Screenshots
 
 `CHRONOUI_SHOT=out.png` makes any example write its window to a PNG about a
@@ -84,13 +93,23 @@ never the screen.
 CHRONOUI_SHOT=catalog.png build-linux/Release/Catalog
 ```
 
+## Continuous integration
+
+`.github/workflows/build.yml` has a `linux` job next to the Windows one: an
+ubuntu-latest runner installs the five packages, builds the tree with
+`-Wall -Wextra -Werror` (two warnings are switched off in `CMakeLists.txt`:
+`-Wunknown-pragmas`, for the headers' `#pragma comment(lib)`, and
+`-Wmisleading-indentation`, for the one-line `if (x) a; b;` house style), then
+starts every example on a virtual X server (`xvfb-run`) with `CHRONOUI_SHOT`
+set. An example that does not start or does not paint fails the run; the PNGs
+and the binaries are uploaded as the run's artifact, so every push leaves a
+visual record of all fourteen examples on Linux.
+
 ## Known limits
 
 - **96 DPI.** DIPs are pixels; a HiDPI screen gets a small window.
 - **Input methods.** Text arrives through SDL's text input; there is no IME
   candidate window positioned at the caret.
-- **The popup menu** behind `VCombo` (`TrackPopupMenu`) is drawn by the port in
-  a plain light style, not in the app's theme.
 - **Rendering differences.** Noto Sans is close to Segoe UI but not the same
   metrics, so a label sized tightly on Windows may wrap or clip slightly
   differently. Gamma 2.2 gradients are interpolated linearly.

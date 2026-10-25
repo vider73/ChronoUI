@@ -60,6 +60,9 @@ if(NOT WIN32)
     pkg_check_modules(CHRONOUI_LINUX REQUIRED IMPORTED_TARGET sdl2 cairo pangocairo pangoft2 fontconfig)
     target_include_directories(chronoui_virtual BEFORE INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include/platform/linux)
     target_link_libraries(chronoui_virtual INTERFACE PkgConfig::CHRONOUI_LINUX)
+    # The headers' `#pragma comment(lib)` is MSVC's linker hint (pkg-config does
+    # that job here), and one-line `if (x) a; b;` is the house style.
+    target_compile_options(chronoui_virtual INTERFACE -Wno-unknown-pragmas -Wno-misleading-indentation)
     # Same layout as the Visual Studio build: <build>/<Config>/<exe> next to <Config>/assets.
     if(NOT CMAKE_BUILD_TYPE)
         set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)

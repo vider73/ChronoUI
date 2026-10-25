@@ -578,6 +578,7 @@ struct HWND__ {
 	struct Timer { UINT ms; uint64_t due; };
 	std::map<UINT_PTR, Timer> timers;
 	std::vector<std::wstring> pendingDrops;
+	cairo_surface_t*          frame = nullptr;   // last presented pixels (the popup menu reads its theme there)
 };
 
 struct HMENU__ {
@@ -702,6 +703,7 @@ inline BOOL DestroyWindow(HWND h) {
 	h->destroyed = true;
 	h->timers.clear();
 	if (h->sdl) { SDL_DestroyWindow(h->sdl); h->sdl = nullptr; }
+	if (h->frame) { cairo_surface_destroy(h->frame); h->frame = nullptr; }
 	auto& v = s.windows;
 	v.erase(std::remove(v.begin(), v.end(), h), v.end());
 	return TRUE;   // the struct itself is never freed: stale HWNDs stay safe to test
@@ -840,7 +842,9 @@ inline BOOL GetClientRect(HWND h, RECT* r) {
 	return TRUE;
 }
 inline BOOL GetWindowRect(HWND h, RECT* r) {
-	if (!r || !IsWindow(h)) return FALSE;
+	if (!r) return FALSE;
+	*r = RECT{ 0, 0, 0, 0 };
+	if (!IsWindow(h)) return FALSE;
 	int x = 0, y = 0, w = 0, hh = 0;
 	SDL_GetWindowPosition(h->sdl, &x, &y); SDL_GetWindowSize(h->sdl, &w, &hh);
 	*r = RECT{ x, y, x + w, y + hh };
@@ -1128,9 +1132,9 @@ inline BOOL  AppendMenuW(HMENU m, UINT flags, UINT_PTR id, LPCWSTR text) {
 	return TRUE;
 }
 inline BOOL CheckMenuItem(HMENU, UINT, UINT) { return TRUE; }
-namespace chrono_linux { inline int RunPopupMenu(HMENU m, int x, int y, UINT flags); }
+namespace chrono_linux { inline int RunPopupMenu(HMENU m, int x, int y, UINT flags, HWND owner); }
 inline BOOL TrackPopupMenu(HMENU m, UINT flags, int x, int y, int, HWND owner, const RECT*) {
-	int cmd = chrono_linux::RunPopupMenu(m, x, y, flags);
+	int cmd = chrono_linux::RunPopupMenu(m, x, y, flags, owner);
 	if (flags & TPM_RETURNCMD) return cmd;
 	if (cmd > 0 && !(flags & TPM_NONOTIFY)) PostMessageW(owner, WM_COMMAND, (WPARAM)cmd, 0);
 	return cmd > 0;
@@ -1340,28 +1344,117 @@ inline LRESULT DispatchMessageW(const MSG* m) {
 // --- the popup menu itself ------------------------------------------------------------------
 // A borderless always-on-top SDL window drawn with Cairo and Pango, run in a
 // nested loop until an item is picked, Escape is pressed or focus leaves.
+//
+// It takes its look from the surface it drops from: the owner window's last
+// frame is sampled where the menu is anchored (inside the combo face, or under
+// the cursor for a context menu), and a dark surface gets the dark palette.
+// The colours are VTheme's, so a menu over a ChronoUI window matches it in
+// both themes without the widgets knowing the menu is not Windows'.
 namespace chrono_linux {
 
-	inline int RunPopupMenu(HMENU m, int x, int y, UINT flags) {
-		if (!m || m->items.empty()) return 0;
-		EnsureSDL();
-		const int rowH = 30, sepH = 9, padY = 4, padX = 32, minW = 140;
+	struct MenuLook {
+		double bg[3], ink[3], grey[3], accent[3];
+		double border, hover, sep;     // alpha of the ink colour for the frame, hover wash, separators
+		bool dark;
+	};
+	inline MenuLook MenuLookFor(bool dark) {
+		auto rgb = [](uint32_t c, double* o) { o[0] = ((c >> 16) & 0xFF) / 255.0; o[1] = ((c >> 8) & 0xFF) / 255.0; o[2] = (c & 0xFF) / 255.0; };
+		MenuLook l{};
+		rgb(dark ? 0x2B2B2B : 0xFFFFFF, l.bg);   rgb(dark ? 0xF3F4F6 : 0x111827, l.ink);
+		rgb(dark ? 0x71717A : 0x9CA3AF, l.grey); rgb(0x4A90E2, l.accent);
+		l.border = dark ? 0.16 : 0.14; l.hover = dark ? 0.08 : 0.06; l.sep = dark ? 0.12 : 0.10;
+		l.dark = dark;
+		return l;
+	}
+	// Is the owner dark where the menu opens? Its last presented frame, sampled
+	// just inside the anchor (screen coordinates).
+	inline bool OwnerIsDark(HWND owner, int sx, int sy) {
+		if (!owner || owner->destroyed || !owner->frame || !owner->sdl) return false;
+		int wx = 0, wy = 0; SDL_GetWindowPosition(owner->sdl, &wx, &wy);
+		int x = sx - wx + 8, y = sy - wy - 4;
+		cairo_surface_t* f = owner->frame;
+		int fw = cairo_image_surface_get_width(f), fh = cairo_image_surface_get_height(f);
+		x = x < 0 ? 0 : x >= fw ? fw - 1 : x;
+		y = y < 0 ? 0 : y >= fh ? fh - 1 : y;
+		cairo_surface_flush(f);
+		const uint8_t* px = cairo_image_surface_get_data(f) + (size_t)y * cairo_image_surface_get_stride(f) + (size_t)x * 4;
+		double lum = (0.2126 * px[2] + 0.7152 * px[1] + 0.0722 * px[0]) / 255.0;   // BGRA
+		return lum < 0.5;
+	}
 
-		PangoFontMap* fm = pango_cairo_font_map_get_default();
-		PangoContext* pc = pango_font_map_create_context(fm);
-		PangoLayout* lay = pango_layout_new(pc);
-		PangoFontDescription* fd = pango_font_description_from_string("Noto Sans");
-		pango_font_description_set_absolute_size(fd, 13.0 * PANGO_SCALE);
-		pango_layout_set_font_description(lay, fd);
+	struct MenuMetrics { int rowH = 30, sepH = 9, padY = 5, padX = 34, minW = 150; };
 
-		int w = minW, h = padY * 2;
-		for (auto& it : m->items) {
-			if (it.flags & MF_SEPARATOR) { h += sepH; continue; }
+	inline void PaintMenu(cairo_t* cr, HMENU m, PangoLayout* lay, const MenuLook& L, int w, int h, int hot) {
+		const MenuMetrics M;
+		cairo_set_source_rgb(cr, L.bg[0], L.bg[1], L.bg[2]); cairo_paint(cr);
+		cairo_set_source_rgba(cr, L.ink[0], L.ink[1], L.ink[2], L.border); cairo_set_line_width(cr, 1);
+		cairo_rectangle(cr, 0.5, 0.5, w - 1, h - 1); cairo_stroke(cr);
+		int top = M.padY;
+		for (size_t i = 0; i < m->items.size(); ++i) {
+			auto& it = m->items[i];
+			if (it.flags & MF_SEPARATOR) {
+				cairo_set_source_rgba(cr, L.ink[0], L.ink[1], L.ink[2], L.sep);
+				cairo_rectangle(cr, 10, top + M.sepH / 2, w - 20, 1); cairo_fill(cr);
+				top += M.sepH; continue;
+			}
+			if ((int)i == hot) {   // a rounded wash, inset from the frame, like the WinUI menu flyout
+				double x0 = 4, y0 = top + 1, x1 = w - 4, y1 = top + M.rowH - 1, r = 4;
+				cairo_new_sub_path(cr);
+				cairo_arc(cr, x1 - r, y0 + r, r, -M_PI / 2, 0); cairo_arc(cr, x1 - r, y1 - r, r, 0, M_PI / 2);
+				cairo_arc(cr, x0 + r, y1 - r, r, M_PI / 2, M_PI); cairo_arc(cr, x0 + r, y0 + r, r, M_PI, 3 * M_PI / 2);
+				cairo_close_path(cr);
+				cairo_set_source_rgba(cr, L.ink[0], L.ink[1], L.ink[2], L.hover); cairo_fill(cr);
+			}
+			bool grey = (it.flags & (MF_GRAYED | MF_DISABLED)) != 0;
+			if (it.flags & MF_CHECKED) {
+				cairo_set_source_rgb(cr, L.accent[0], L.accent[1], L.accent[2]);
+				cairo_set_line_width(cr, 1.8); cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND); cairo_set_line_join(cr, CAIRO_LINE_JOIN_ROUND);
+				double cy = top + M.rowH / 2.0;
+				cairo_move_to(cr, 12, cy); cairo_line_to(cr, 16, cy + 4); cairo_line_to(cr, 23, cy - 4); cairo_stroke(cr);
+			}
+			const double* c = grey ? L.grey : L.ink;
+			cairo_set_source_rgb(cr, c[0], c[1], c[2]);
 			pango_layout_set_text(lay, ToUtf8(it.text).c_str(), -1);
 			int tw, th; pango_layout_get_pixel_size(lay, &tw, &th);
-			if (tw + padX * 2 > w) w = tw + padX * 2;
-			h += rowH;
+			cairo_move_to(cr, M.padX, top + (M.rowH - th) / 2);
+			pango_cairo_show_layout(cr, lay);
+			top += M.rowH;
 		}
+	}
+
+	inline PangoLayout* MenuLayout() {
+		static PangoLayout* lay = [] {
+			PangoContext* pc = pango_font_map_create_context(pango_cairo_font_map_get_default());
+			PangoLayout* l = pango_layout_new(pc);
+			g_object_unref(pc);
+			PangoFontDescription* fd = pango_font_description_from_string("Noto Sans");
+			pango_font_description_set_absolute_size(fd, 13.0 * PANGO_SCALE);
+			pango_layout_set_font_description(l, fd);
+			pango_font_description_free(fd);
+			return l;
+		}();
+		return lay;
+	}
+	inline void MenuSize(HMENU m, int* w, int* h) {
+		const MenuMetrics M;
+		*w = M.minW; *h = M.padY * 2;
+		for (auto& it : m->items) {
+			if (it.flags & MF_SEPARATOR) { *h += M.sepH; continue; }
+			pango_layout_set_text(MenuLayout(), ToUtf8(it.text).c_str(), -1);
+			int tw, th; pango_layout_get_pixel_size(MenuLayout(), &tw, &th);
+			if (tw + M.padX + 24 > *w) *w = tw + M.padX + 24;
+			*h += M.rowH;
+		}
+	}
+
+	inline int RunPopupMenu(HMENU m, int x, int y, UINT flags, HWND owner) {
+		if (!m || m->items.empty()) return 0;
+		EnsureSDL();
+		const MenuMetrics M;
+		const MenuLook look = MenuLookFor(OwnerIsDark(owner ? owner : GetActiveWindow(), x, y));
+		PangoLayout* lay = MenuLayout();
+
+		int w, h; MenuSize(m, &w, &h);
 		if (flags & TPM_RIGHTALIGN) x -= w; else if (flags & TPM_CENTERALIGN) x -= w / 2;
 		if (flags & TPM_BOTTOMALIGN) y -= h; else if (flags & TPM_VCENTERALIGN) y -= h / 2;
 		SDL_Rect screen{ 0, 0, 1920, 1080 }; SDL_GetDisplayUsableBounds(0, &screen);
@@ -1372,13 +1465,13 @@ namespace chrono_linux {
 
 		SDL_Window* win = SDL_CreateWindow("", x, y, w, h,
 			SDL_WINDOW_BORDERLESS | SDL_WINDOW_ALWAYS_ON_TOP | SDL_WINDOW_SKIP_TASKBAR | SDL_WINDOW_POPUP_MENU);
-		if (!win) { g_object_unref(lay); g_object_unref(pc); pango_font_description_free(fd); return 0; }
+		if (!win) return 0;
 		SDL_RaiseWindow(win);
 
 		auto rowAt = [&](int my) -> int {
-			int top = padY;
+			int top = M.padY;
 			for (size_t i = 0; i < m->items.size(); ++i) {
-				int rh = (m->items[i].flags & MF_SEPARATOR) ? sepH : rowH;
+				int rh = (m->items[i].flags & MF_SEPARATOR) ? M.sepH : M.rowH;
 				if (my >= top && my < top + rh) return (m->items[i].flags & (MF_SEPARATOR | MF_GRAYED | MF_DISABLED)) ? -1 : (int)i;
 				top += rh;
 			}
@@ -1400,34 +1493,7 @@ namespace chrono_linux {
 			if (dirty) {
 				dirty = false;
 				cairo_t* cr = cairo_create(surf);
-				cairo_set_source_rgb(cr, 1, 1, 1); cairo_paint(cr);
-				cairo_set_source_rgba(cr, 0, 0, 0, 0.18); cairo_set_line_width(cr, 1);
-				cairo_rectangle(cr, 0.5, 0.5, w - 1, h - 1); cairo_stroke(cr);
-				int top = padY;
-				for (size_t i = 0; i < m->items.size(); ++i) {
-					auto& it = m->items[i];
-					if (it.flags & MF_SEPARATOR) {
-						cairo_set_source_rgba(cr, 0, 0, 0, 0.10);
-						cairo_rectangle(cr, 8, top + sepH / 2, w - 16, 1); cairo_fill(cr);
-						top += sepH; continue;
-					}
-					if ((int)i == hot) {
-						cairo_set_source_rgba(cr, 0, 0, 0, 0.06);
-						cairo_rectangle(cr, 4, top, w - 8, rowH); cairo_fill(cr);
-					}
-					bool grey = (it.flags & (MF_GRAYED | MF_DISABLED)) != 0;
-					cairo_set_source_rgb(cr, grey ? 0.62 : 0.07, grey ? 0.64 : 0.09, grey ? 0.68 : 0.15);
-					if (it.flags & MF_CHECKED) {
-						cairo_set_line_width(cr, 1.6);
-						cairo_move_to(cr, 11, top + rowH / 2); cairo_line_to(cr, 15, top + rowH / 2 + 4);
-						cairo_line_to(cr, 22, top + rowH / 2 - 4); cairo_stroke(cr);
-					}
-					pango_layout_set_text(lay, ToUtf8(it.text).c_str(), -1);
-					int tw, th; pango_layout_get_pixel_size(lay, &tw, &th);
-					cairo_move_to(cr, padX, top + (rowH - th) / 2);
-					pango_cairo_show_layout(cr, lay);
-					top += rowH;
-				}
+				PaintMenu(cr, m, lay, look, w, h, hot);
 				cairo_destroy(cr);
 				cairo_surface_flush(surf);
 				SDL_Surface* ws = SDL_GetWindowSurface(win);
@@ -1477,7 +1543,6 @@ namespace chrono_linux {
 		}
 		cairo_surface_destroy(surf);
 		SDL_DestroyWindow(win);
-		g_object_unref(lay); g_object_unref(pc); pango_font_description_free(fd);
 		for (HWND hw : S().windows) hw->dirty = true;
 		return result;
 	}

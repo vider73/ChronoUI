@@ -929,6 +929,10 @@ struct ID2D1HwndRenderTarget : ID2D1RenderTarget {
 		                  ws->format->format, ws->pixels, ws->pitch);
 		SDL_UnlockSurface(ws);
 		SDL_UpdateWindowSurface(hwnd->sdl);
+		if (hwnd->frame != surf) {
+			if (hwnd->frame) cairo_surface_destroy(hwnd->frame);
+			hwnd->frame = cairo_surface_reference(surf);
+		}
 		Snapshot();
 		return S_OK;
 	}

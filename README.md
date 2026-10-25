@@ -2,16 +2,17 @@
 
 # ChronoUI
 
-### The Windows UI framework a language model can drive: headers only, no dependencies, good-looking by default.
+### The UI framework a language model can drive, on Windows and Linux: headers only, no dependencies, good-looking by default.
 
-[![Platform](https://img.shields.io/badge/platform-Windows%2010%2B-0078D4?logo=windows&logoColor=white)](#building)
+[![Windows](https://img.shields.io/badge/Windows-10%2B-0078D4?logo=windows&logoColor=white)](#building)
+[![Linux](https://img.shields.io/badge/Linux-SDL2%20%C2%B7%20Cairo%20%C2%B7%20Pango-FCC624?logo=linux&logoColor=black)](#linux)
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white)](#building)
 [![Direct2D](https://img.shields.io/badge/render-Direct2D%20%2B%20DirectWrite-8A2BE2)](#how-a-screen-is-built)
-[![Dependencies](https://img.shields.io/badge/dependencies-none-success)](#building)
+[![Dependencies](https://img.shields.io/badge/dependencies-none%20on%20Windows-success)](#building)
 [![build](https://github.com/vider73/ChronoUI/actions/workflows/build.yml/badge.svg)](https://github.com/vider73/ChronoUI/actions/workflows/build.yml)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**Tell your assistant what the app should do, hand it one example as a template, and get a native Windows program back: one `.cpp`, the Windows SDK, nothing to install and nothing to ship next to the exe.**
+**Tell your assistant what the app should do, hand it one example as a template, and get a native Windows program back: one `.cpp`, the Windows SDK, nothing to install and nothing to ship next to the exe. The same `.cpp` builds natively on Linux.**
 About seventy widgets in the WinUI 3 vocabulary, light and dark, GPU-accelerated, cold start under a second. No vcpkg, no package manager, no runtime, no bundled browser, no XAML, no DLL.
 
 ![VirtualShowcase — the guided tour of the framework](docs/screenshots/virtual-showcase.png)
@@ -30,7 +31,7 @@ ChronoUI is the other option: **plain C++17 on Direct2D + DirectWrite**. A windo
 
 It was written with models, on purpose, and it is shaped so that a model can pick it up: see [Made for a model to drive](#made-for-a-model-to-drive) and [Credits](#credits).
 
-**Honest scope:** Windows only. Direct2D goes deep into the design, so a Linux or macOS port is a rewrite, not a port. If that is a dealbreaker, stop here — no hard feelings.
+**Honest scope:** Windows first, Linux too. The framework speaks Win32 and Direct2D; on Linux the same headers build against a compatibility layer that implements the slice of Win32, Direct2D and DirectWrite they use on SDL2, Cairo and Pango ([docs/LINUX.md](docs/LINUX.md)). All fourteen examples run there, at 96 DPI for now. macOS is not supported.
 
 ---
 
@@ -44,7 +45,7 @@ cmake --build build --config Release --target VirtualShowcase
 build\Release\VirtualShowcase.exe
 ```
 
-That is the whole prerequisite list: Visual Studio 2022 with the Desktop C++ workload, and CMake. Nothing to install first, nothing to configure.
+That is the whole prerequisite list: Visual Studio 2022 with the Desktop C++ workload, and CMake. Nothing to install first, nothing to configure. On Linux it is five packages and the same two CMake lines: [Building → Linux](#linux).
 
 ---
 
