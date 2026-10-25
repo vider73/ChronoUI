@@ -4,6 +4,8 @@
 #
 # Invoked by the chronoui_assets target:
 #   cmake -DSRC=... -DDST=... -P StageAssets.cmake
+# Optional -DEXCLUDE=<regex>: relative paths matching it are not copied (Windows
+# skips fonts/, the Linux port's icon fonts).
 #
 # One pass: file(GLOB_RECURSE) + copy-if-different, so the build log gets one
 # line instead of one per file.
@@ -14,6 +16,9 @@ if(NOT SRC OR NOT DST)
 endif()
 
 file(GLOB_RECURSE _files RELATIVE "${SRC}" "${SRC}/*")
+if(EXCLUDE)
+    list(FILTER _files EXCLUDE REGEX "${EXCLUDE}")
+endif()
 
 file(MAKE_DIRECTORY "${DST}")
 foreach(_f ${_files})

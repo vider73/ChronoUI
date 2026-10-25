@@ -24,6 +24,7 @@
 #include <vector>
 #include <memory>
 #include <fstream>
+#include <filesystem>
 
 #include "ChronoController.hpp"   // ComPtr, the WIC factory
 
@@ -136,7 +137,7 @@ namespace ChronoUI {
 				? fullPath : fullPath.substr(slash + 1);
 
 			// Leer raw bytes del archivo.
-			std::ifstream f(fullPath, std::ios::binary | std::ios::ate);
+			std::ifstream f(std::filesystem::path(fullPath), std::ios::binary | std::ios::ate);   // path: wide names on every compiler
 			if (!f) return nullptr;
 			std::streamsize sz = f.tellg();
 			if (sz <= 0 || sz > (50 * 1024 * 1024)) return nullptr;  // cap a 50 MB

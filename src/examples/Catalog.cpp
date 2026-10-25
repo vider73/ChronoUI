@@ -222,7 +222,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR cmdLine, int) {
 	menubar->OnPick([&](int m, int i) { say(L"Menu bar: " + menubar->At(m, i).label); });
 	auto* cmd = win.AddChrome<VCommandBar>(); cmd->Attach(&win); flyouts.push_back(cmd);
 	cmd->Add(L"\xE8A5", L"New").Add(L"\xE8E5", L"Open").Add(L"\xE74E", L"Save", L"Ctrl+S").Separator()
-	   .Add(L"\xE8C8", L"Copy").Add(L"\xE77F", L"Paste").Separator().Add(L"\xE7A7", L"Undo").Add(L"\xE7A6", L"Redo").Add(L"\xE749", L"Print").Add(L"\xE72E", L"Share").Add(L"\xE713", L"Settings");
+	   .Add(L"\xE8C8", L"Copy").Add(L"\xE77F", L"Paste").Separator().Add(L"\xE7A7", L"Undo").Add(L"\xE7A6", L"Redo").Add(L"\xE749", L"Print").Add(L"\xE72D", L"Share").Add(L"\xE713", L"Settings");
 	cmd->OnPick([&](int i) { say(L"Command bar: " + cmd->At(i).label); });
 	cell(3, L"VMenuBar \x00B7 VCommandBar (narrow the window: the bar overflows)", 40.0f, { menubar, cmd }, true);
 

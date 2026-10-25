@@ -127,6 +127,14 @@ cmake -S . -B build -A x64
 cmake --build build --config Release
 ```
 
+On Linux the same headers build against `include/platform/linux/` (Win32 /
+D2D / DWrite / WIC on SDL2, Cairo, Pango): `cmake -S . -B build-linux -G Ninja`
+then `cmake --build build-linux`, output in `build-linux/Release/`. Widget code
+stays Windows code; when a header needs an API the port lacks, add it to the
+port, not an `#ifdef` to the widget. `CHRONOUI_SHOT=out.png` screenshots any
+example. Icons there come from `assets/fonts/` (Fluent UI System Icons, MIT);
+a new MDL2 glyph needs a row in `tools/make_icon_font.py`. See `docs/LINUX.md`.
+
 Output lands in `build/Release/`. A project that uses ChronoUI needs no build
 step at all: `add_subdirectory` it and link `ChronoUI::Virtual`, which is the
 include path and nothing more. `.github/workflows/build.yml` builds the tree

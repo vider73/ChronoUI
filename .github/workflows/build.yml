@@ -41,3 +41,20 @@ jobs:
             build/Release/*.dll
             build/Release/assets/**
           retention-days: 14
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Dependencies
+        run: sudo apt-get update && sudo apt-get install -y ninja-build libsdl2-dev libcairo2-dev libpango1.0-dev libstb-dev fonts-noto-core
+
+      - name: Configure
+        run: cmake -S . -B build-linux -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build-linux
+
+      - name: What came out
+        run: ls -1 build-linux/Release

@@ -49,6 +49,24 @@ add_library(ChronoUI::Virtual ALIAS chronoui_virtual)
 target_include_directories(chronoui_virtual INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_features(chronoui_virtual INTERFACE cxx_std_17)
 
+# --- Linux -------------------------------------------------------------------
+# The headers stay the same: include/platform/linux answers <windows.h>,
+# <d2d1.h>, <dwrite.h>, <wincodec.h> and <wrl/client.h> with the Win32 / D2D /
+# DirectWrite / WIC subset ChronoUI uses, on SDL2, Cairo, Pango and stb_image.
+# Those are the port's dependencies, found through pkg-config; Windows still
+# needs nothing beyond the SDK.
+if(NOT WIN32)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(CHRONOUI_LINUX REQUIRED IMPORTED_TARGET sdl2 cairo pangocairo pangoft2 fontconfig)
+    target_include_directories(chronoui_virtual BEFORE INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include/platform/linux)
+    target_link_libraries(chronoui_virtual INTERFACE PkgConfig::CHRONOUI_LINUX)
+    # Same layout as the Visual Studio build: <build>/<Config>/<exe> next to <Config>/assets.
+    if(NOT CMAKE_BUILD_TYPE)
+        set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+    endif()
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>)
+endif()
+
 option(CHRONOUI_BUILD_EXAMPLES "Build the examples (and the side apps when their folders are present)" ON)
 option(CHRONOUI_LEGACY "Build the older DLL model in legacy/: ChronoUI.dll, the cw.* widgets, their demos" ON)
 
@@ -66,8 +84,11 @@ endif()
 # resolve them as <exe_dir>/assets/<file> whatever the working directory.
 # One staging target, not one post-build per exe: N parallel copies of the
 # same tree into the same place raced under MSBuild /m.
+if(WIN32)
+    set(_assets_exclude -DEXCLUDE=^fonts/)   # the Linux port's icon fonts; Windows draws icons with Segoe MDL2 Assets
+endif()
 add_custom_target(chronoui_assets
-    COMMAND ${CMAKE_COMMAND}
+    COMMAND ${CMAKE_COMMAND} ${_assets_exclude}
             -DSRC=${CMAKE_CURRENT_SOURCE_DIR}/assets
             -DDST=${CMAKE_BINARY_DIR}/$<CONFIG>/assets
             -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/StageAssets.cmake
@@ -77,7 +98,7 @@ add_custom_target(chronoui_assets
 set_target_properties(chronoui_assets PROPERTIES FOLDER "Examples")
 
 # The DLL model lives in legacy/ and only in this checkout (see legacy/README.md).
-if(CHRONOUI_LEGACY AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/legacy/CMakeLists.txt")
+if(WIN32 AND CHRONOUI_LEGACY AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/legacy/CMakeLists.txt")
     add_subdirectory(legacy)
 endif()
 
@@ -96,6 +117,9 @@ set(CHRONOUI_VIRTUAL_EXAMPLES
 foreach(_ex ${CHRONOUI_VIRTUAL_EXAMPLES})
     add_executable(${_ex} WIN32 src/examples/${_ex}.cpp)
     target_link_libraries(${_ex} PRIVATE ChronoUI::Virtual)
+    if(NOT WIN32)
+        target_sources(${_ex} PRIVATE src/platform/linux_main.cpp)   # main() -> wWinMain()
+    endif()
     set_target_properties(${_ex} PROPERTIES FOLDER "Examples")
     if(MSVC)
         set_property(TARGET ${_ex} PROPERTY WIN32_EXECUTABLE TRUE)
@@ -105,16 +129,21 @@ endforeach()
 foreach(_ex VirtualHello Catalog Booking)     # the ones that load a file from assets/
     add_dependencies(${_ex} chronoui_assets)
 endforeach()
+if(NOT WIN32)                                  # on Linux every example reads assets/fonts
+    foreach(_ex ${CHRONOUI_VIRTUAL_EXAMPLES})
+        add_dependencies(${_ex} chronoui_assets)
+    endforeach()
+endif()
 
 # --- The side apps -----------------------------------------------------------
 # JLToys (a tray of desktop toys) and ClaudeMM (a Claude Code session
 # organiser) live here as proof the framework carries real UI. Their sources
 # stay out of the public tree (tools/sync_public.py), so each is built only
 # when its folder is present. ClaudeMM also needs nlohmann/json.
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/JLToys/CMakeLists.txt")
+if(WIN32 AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/JLToys/CMakeLists.txt")
     add_subdirectory(JLToys)
 endif()
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ClaudeMM/CMakeLists.txt")
+if(WIN32 AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ClaudeMM/CMakeLists.txt")
     find_package(nlohmann_json QUIET)
     if(nlohmann_json_FOUND)
         add_subdirectory(ClaudeMM)

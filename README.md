@@ -153,6 +153,19 @@ target_link_libraries(MyApp PRIVATE ChronoUI::Virtual)
 
 Or copy `include/` next to your sources. The Windows SDK libraries come in through `#pragma comment(lib)` in the headers.
 
+### Linux
+
+The same headers build natively on Linux. `include/platform/linux/` answers `<windows.h>`, `<d2d1.h>` and `<dwrite.h>` with the Win32 / Direct2D / DirectWrite subset ChronoUI uses, on **SDL2**, **Cairo** and **Pango**. Those are the only dependencies, and only there:
+
+```bash
+sudo apt install cmake ninja-build g++ libsdl2-dev libcairo2-dev libpango1.0-dev libstb-dev fonts-noto-core
+cmake -S . -B build-linux -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build-linux
+build-linux/Release/Catalog
+```
+
+Icons come from Microsoft's MIT-licensed **Fluent UI System Icons**. The complete set ships in `assets/fonts/fluent/`, and `assets/fonts/ChronoUIIcons.ttf` places the 72 icons the widgets use at their Segoe MDL2 code points, so the `L"\xE80F"` glyphs work unchanged. How the port works and its limits: [docs/LINUX.md](docs/LINUX.md).
+
 ---
 
 ## Working with a model
@@ -192,6 +205,9 @@ include/            the whole framework, fourteen headers:
 src/examples/       the fourteen examples (docs/EXAMPLES.md), one .cpp each
 tools/shoot.ps1     the screenshot driver behind every image in this README
 tools/api_md.py     regenerates docs/API.md from the headers
+tools/make_icon_font.py  builds assets/fonts/ChronoUIIcons.ttf (Linux icons)
+include/platform/linux/  the Linux port: Win32 / D2D / DWrite / WIC on SDL2, Cairo, Pango
+assets/fonts/       ChronoUI Icons + the full Fluent UI System Icons (MIT)
 docs/               API.md, EXAMPLES.md, WIDGETS.md and screenshots/
 llms.txt            the map of the above, for a crawler or a context window
 ```
@@ -205,6 +221,8 @@ llms.txt            the map of the above, for a crawler or a context window
 **Architect:** Jose Luis Rey Mejías — [@vider73](https://github.com/vider73). Decades of MSVC C++ and a long grudge against the state of native Windows UI.
 
 **Written with models, on purpose.** The first generation, a DLL per widget with a CSS engine behind it, came out of pair-programming sessions with **Gemini**; it did its job and stepped aside. The virtual-widget model, the seventy widgets, the fourteen examples, the apps and most of what you are reading were built with **Claude Code**, one session per round, against the WinUI 3 controls list. The codebase is shaped so that a model can pick it up and extend it — small self-contained files, one shape for every widget, conventions written down in `CLAUDE.md`. That is the whole thesis, and the repo is the evidence.
+
+**Icons on Linux:** [Fluent UI System Icons](https://github.com/microsoft/fluentui-system-icons) by Microsoft, MIT ([assets/fonts/fluent/LICENSE](assets/fonts/fluent/LICENSE)).
 
 **License:** [MIT](LICENSE).
 
