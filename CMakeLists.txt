@@ -155,7 +155,7 @@ if(WIN32 AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ClaudeMM/CMakeLists.txt")
                        "vcpkg install nlohmann-json:x64-windows).")
     endif()
 endif()
-# ClaudeMM on Linux (first pass: scanner + list, ClaudeMM/src/ClaudeMM_linux.cpp).
+# ClaudeMM on Linux: the same ClaudeMM.cpp (list, map, inspector, web servers).
 # Opt-in so the CI's linux job does not depend on nlohmann-json3-dev.
 option(CHRONOUI_CLAUDEMM_LINUX "Build the Linux ClaudeMM (needs nlohmann-json3-dev)" OFF)
 if(NOT WIN32 AND CHRONOUI_CLAUDEMM_LINUX AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ClaudeMM/CMakeLists.txt")
