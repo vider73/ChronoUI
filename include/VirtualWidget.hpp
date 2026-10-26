@@ -210,6 +210,11 @@ namespace ChronoUI {
 		// overlay after ~700ms.
 		void                SetTooltip(const std::wstring& s) { m_tooltip = s; }
 		const std::wstring& GetTooltip() const                 { return m_tooltip; }
+		// A widget that has a popup of its own open (a flyout's list, a dialog)
+		// says so here, and the host keeps its tooltip away: the flyout covers
+		// the window while open, so the hovered widget stays the button and its
+		// tooltip would otherwise drop right over the list it just opened.
+		virtual bool        TooltipSuppressed() const          { return false; }
 
 	protected:
 		std::wstring m_tooltip;
@@ -800,7 +805,12 @@ namespace ChronoUI {
 			// every time the hovered widget changes.
 			if (m_hovered) {
 				if (auto* impl = dynamic_cast<VirtualWidgetImpl*>(m_hovered)) {
-					if (!impl->GetTooltip().empty()) {
+					if (impl->TooltipSuppressed()) {
+						// its own popup is open: no tooltip over the list, and the
+						// dwell starts over once the popup closes
+						m_hoverDwellS = 0.0f;
+						if (m_tooltipVisible) { m_tooltipVisible = false; m_tooltipText.clear(); needsRedraw = true; }
+					} else if (!impl->GetTooltip().empty()) {
 						m_hoverDwellS += dt;
 						if (!m_tooltipVisible && m_hoverDwellS >= kTooltipDelayS) {
 							m_tooltipVisible = true;

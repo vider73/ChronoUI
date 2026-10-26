@@ -294,6 +294,7 @@ namespace ChronoUI {
 		std::function<void(int)> m_cb;
 
 		std::vector<int> Buttons() const { std::vector<int> v; for (int k = 0; k < 3; ++k) if (!m_btn[k].empty()) v.push_back(k); return v; }
+		bool TooltipSuppressed() const override { return m_open; }
 		float BodyH() const { return vd::TextHeight(m_body, m_width - 48.0f, vd::Style().Size(13).Wrap()); }
 		D2D1_RECT_F Panel() const {
 			float h = 24.0f + 30.0f + 10.0f + BodyH() + 28.0f + 36.0f + 24.0f;

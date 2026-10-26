@@ -167,6 +167,12 @@ bool IsDark()
 D2D1_COLOR_F Overlay(float alpha)
 ```
 
+### `VirtualWidgetImpl` : IVirtualWidget
+
+```cpp
+bool TooltipSuppressed() const
+```
+
 ### `VirtualWindow`
 
 ```cpp
@@ -521,6 +527,7 @@ void Cover(float w, float h)
 void Open(const D2D1_RECT_F& anchor)
 void Close()
 bool IsOpen() const
+bool TooltipSuppressed() const
 const D2D1_RECT_F& Panel() const
 ```
 

@@ -504,6 +504,7 @@ namespace ChronoUI {
 		}
 		void Close()         { m_open = false; }
 		bool IsOpen() const  { return m_open; }
+		bool TooltipSuppressed() const override { return m_open; }   // the list, not the button's tooltip
 		const D2D1_RECT_F& Panel() const { return m_panel; }
 
 		bool CanFocus() const override { return m_open; }
