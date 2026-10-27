@@ -221,6 +221,7 @@ const std::wstring& GetText() const
 
 ```cpp
 VButton& Text(const std::wstring& t)
+const std::wstring& GetText() const
 VButton& Face(D2D1_COLOR_F c)
 VButton& FaceHover(D2D1_COLOR_F c)
 VButton& FacePress(D2D1_COLOR_F c)
@@ -369,6 +370,7 @@ void OnChange(std::function<void(int)> cb)
 ```cpp
 VSegment(std::vector<std::wstring> items) : m_items(std::move(items))
 VSegment& Set(int i)
+size_t Longest() const
 int Value() const
 void OnChange(std::function<void(int)> cb)
 ```

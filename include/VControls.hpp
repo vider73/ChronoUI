@@ -203,6 +203,7 @@ namespace ChronoUI {
 		const char* GetTypeName() const override { return "VSegment"; }
 		bool CanFocus() const override { return true; }
 		VSegment& Set(int i) { m_sel = i; m_pos = (float)i; return *this; }
+		size_t Longest() const { size_t n = 0; for (auto& t : m_items) n = (std::max)(n, t.size()); return n; }   // characters of the widest label: a layout can size the control to its translations
 		int       Value() const { return m_sel; }
 		void OnChange(std::function<void(int)> cb) { m_cb = std::move(cb); }
 		bool OnUpdate(float dt) override {

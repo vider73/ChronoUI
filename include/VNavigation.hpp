@@ -500,7 +500,7 @@ namespace ChronoUI {
 		void Cover(float w, float h)   { m_cover = vd::Rect(0.0f, 0.0f, w, h); if (m_open) Place(); }
 		void Open(const D2D1_RECT_F& anchor) {
 			m_anchor = anchor; Place(); m_open = true; OnOpened();
-			if (m_win) m_win->SetFocusWidget(this);
+			if (m_win) { m_win->BringChromeToFront(this); m_win->SetFocusWidget(this); }   // the panel paints over every other chrome widget (a dropdown below it, say)
 		}
 		void Close()         { m_open = false; }
 		bool IsOpen() const  { return m_open; }

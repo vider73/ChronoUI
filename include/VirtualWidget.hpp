@@ -877,6 +877,10 @@ namespace ChronoUI {
 		}
 
 		void DispatchMouseDown(float cx, float cy, int btn) {
+			// a click ends the tooltip, like native ones: a dropdown's list must not open under its own tooltip; it stays
+			// away until the mouse moves to another widget (the dwell is pushed far below the threshold)
+			if (m_tooltipVisible) { m_tooltipVisible = false; m_tooltipText.clear(); InvalidateRect(m_hwnd, NULL, FALSE); }
+			m_hoverDwellS = -1.0e6f;
 			HitResult hr = HitTopmostBothLayers(cx, cy);
 			if (!hr.w) return;
 			float lx = cx, ly = hr.isChrome ? cy : (cy + m_scrollY);
@@ -1193,6 +1197,7 @@ namespace ChronoUI {
 		bool CanFocus() const override { return m_enabled; }
 
 		VButton& Text(const std::wstring& t) { m_text = t; return *this; }
+		const std::wstring& GetText() const { return m_text; }   // layouts that size a button by its (translated) text
 		VButton& Face(D2D1_COLOR_F c)        { m_face = c; return *this; }
 		VButton& FaceHover(D2D1_COLOR_F c)   { m_faceHover = c; return *this; }
 		VButton& FacePress(D2D1_COLOR_F c)   { m_facePress = c; return *this; }
@@ -1211,7 +1216,9 @@ namespace ChronoUI {
 		void OnDraw(ID2D1RenderTarget* pRT) override {
 			// Disabled: 35% blend between the face color and a neutral gray.
 			// Pre-baked here rather than via opacity so the button still looks
-			// solid on whatever background the host paints.
+			// solid on whatever background the host paints. The gray follows the
+			// theme: a light one turned dark-theme buttons into pale blocks.
+			const D2D1_COLOR_F neutral = vtheme::IsDark() ? D2D1::ColorF(0x3A3D42) : D2D1::ColorF(0xC8CCD2);
 			auto blend = [](D2D1_COLOR_F a, D2D1_COLOR_F b, float t) -> D2D1_COLOR_F {
 				return D2D1::ColorF(
 					a.r + (b.r - a.r) * t,
@@ -1222,7 +1229,7 @@ namespace ChronoUI {
 
 			D2D1_COLOR_F face = m_face;
 			if (!m_enabled) {
-				face = blend(m_face, D2D1::ColorF(0xC8CCD2), 0.55f);
+				face = blend(m_face, neutral, 0.55f);
 			} else if (m_pressed) {
 				face = m_facePress;
 			} else if (m_hovered) {
@@ -1245,7 +1252,7 @@ namespace ChronoUI {
 					pTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
 					D2D1_COLOR_F textCol = m_enabled
 						? m_text_color
-						: blend(m_text_color, D2D1::ColorF(0xC8CCD2), 0.45f);
+						: blend(m_text_color, vtheme::IsDark() ? D2D1::ColorF(0x6B7078) : D2D1::ColorF(0xC8CCD2), 0.45f);
 					ComPtr<ID2D1SolidColorBrush> pTextBrush;
 					pRT->CreateSolidColorBrush(textCol, &pTextBrush);
 					if (pTextBrush) {
