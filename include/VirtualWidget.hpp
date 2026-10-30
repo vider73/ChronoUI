@@ -410,6 +410,32 @@ namespace ChronoUI {
 			return true;
 		}
 
+		// Hand a widget over to another window of the same thread: it keeps its
+		// bounds and state and lands in the same layer there (content or chrome),
+		// painted last. This window forgets it as captured / hovered / focused.
+		// Used to split one screen across two windows (a page viewer on a second
+		// monitor) and to bring it back. A widget that keeps its window (Attach)
+		// must be attached again; its bounds are the new window's to set.
+		// No-op (false) if the pointer isn't one of this window's widgets.
+		bool MoveWidget(IVirtualWidget* w, VirtualWindow& to) {
+			if (!w || &to == this) return false;
+			for (auto* list : { &m_widgets, &m_chrome }) {
+				auto it = std::find_if(list->begin(), list->end(),
+					[w](const std::unique_ptr<IVirtualWidget>& p) { return p.get() == w; });
+				if (it == list->end()) continue;
+				if (m_capture == w) { m_capture = nullptr; ReleaseCapture(); }
+				if (m_hovered == w) { w->OnMouseLeave(); m_hovered = nullptr; m_tooltipVisible = false; m_tooltipText.clear(); }
+				if (m_focused == w) { w->OnFocus(false); m_focused = nullptr; }
+				auto p = std::move(*it);
+				list->erase(it);
+				(list == &m_widgets ? to.m_widgets : to.m_chrome).push_back(std::move(p));
+				if (m_hwnd) InvalidateRect(m_hwnd, NULL, FALSE);
+				if (to.m_hwnd) InvalidateRect(to.m_hwnd, NULL, FALSE);
+				return true;
+			}
+			return false;
+		}
+
 		// Tell the host how much of the viewport is occupied by chrome. The
 		// scrollable layer is clipped to the rectangle inside these insets, so
 		// content can never bleed visually under header/footer/sidebars.

@@ -183,6 +183,7 @@ void CycleFocus(int dir)
 bool RemoveWidget(IVirtualWidget* w)
 bool RemoveChrome(IVirtualWidget* w)
 bool BringChromeToFront(IVirtualWidget* w)
+bool MoveWidget(IVirtualWidget* w, VirtualWindow& to)
 void SetSafeAreaInsets(float top, float right, float bottom, float left)
 void SetBackground(D2D1_COLOR_F c)
 HWND GetHWND() const
