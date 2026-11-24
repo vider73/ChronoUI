@@ -497,8 +497,12 @@ namespace ChronoUI {
 			if (customChrome) {
 				// Force the OS to recompute the non-client size now that our
 				// WM_NCCALCSIZE handler is hooked up; this removes the title bar.
+				// NOACTIVATE: without it a process that may take the foreground
+				// activates the window here, hidden or not, and the keyboard goes
+				// to it before it is shown (or forever, if it is a deferShow window
+				// that stays hidden). Showing it with SW_SHOW still activates it.
 				SetWindowPos(m_hwnd, nullptr, 0, 0, 0, 0,
-					SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
+					SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
 			}
 
 			if (!deferShow) {
